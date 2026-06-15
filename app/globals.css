@@ -1,0 +1,62 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ------------------------------------------------------------------ */
+/*  SmartRivals — Design tokens (brand identity preserved from v1)     */
+/* ------------------------------------------------------------------ */
+@theme {
+  --color-primary: #3b82f6;
+  --color-secondary: #fbbf24;
+  --color-accent: #60a5fa;
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-sidebar: #9dd3ff;
+  --color-sidebar-text: #0c4a6e;
+
+  /* Logo letters: "S"mart (blue) "R"ivals (yellow) */
+  --color-brand-blue: #8bd8ee;
+  --color-brand-yellow: #fcd172;
+}
+
+/* Fonts are injected at runtime via next/font on <html> */
+@theme inline {
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fredoka), var(--font-poppins), sans-serif;
+}
+
+body {
+  background-color: var(--color-background);
+  font-family: var(--font-sans);
+}
+
+/* Custom scrollbar (ported from v1) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #bae6fd;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #7dd3fc;
+}
+
+/* Shared shake animation used by several quiz types */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
