@@ -70,11 +70,12 @@ Stack: Next.js 16 (App Router) · Supabase · Tailwind v4 · TS
 
 ## Phase 4 — Polish + verify
 
-- [ ] Loading / error / empty states
-- [ ] Responsive + accessibility pass
-- [ ] Tests for validation + scoring
-- [ ] Deploy to Vercel + env wiring
-- [ ] Remove `legacy/`
+- [x] States: branded `not-found.tsx` + `error.tsx`; empty/loading states across
+      daily, catalog, multiplayer, profile, leaderboard
+- [x] Responsive (login verified on mobile) + a11y (aria-labels on icon buttons)
+- [x] Vitest + unit tests for validation (13) + scoring (7) — `npm test`, 20 pass
+- [ ] Deploy to Vercel + env wiring (user-side; instructions provided)
+- [ ] Remove `legacy/` (port complete; recoverable from `main`) — pending confirm
 
 ---
 

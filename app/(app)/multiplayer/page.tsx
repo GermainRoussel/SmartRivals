@@ -177,7 +177,11 @@ export default function MultiplayerPage() {
               maxLength={6}
               className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-bold text-center text-xl uppercase placeholder:text-slate-300 focus:border-primary outline-none"
             />
-            <Button onClick={join} disabled={busy || joinCode.trim().length < 4}>
+            <Button
+              onClick={join}
+              disabled={busy || joinCode.trim().length < 4}
+              aria-label="Rejoindre la salle"
+            >
               {busy ? <Loader2 className="animate-spin" /> : <Play fill="currentColor" />}
             </Button>
           </div>

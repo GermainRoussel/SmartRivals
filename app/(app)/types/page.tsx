@@ -152,6 +152,7 @@ export default function TypesPage() {
                 {samples.length > 1 && (
                   <button
                     onClick={nextExample}
+                    aria-label="Exemple suivant"
                     className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition-all flex items-center gap-2"
                   >
                     <Shuffle size={16} /> <span className="hidden sm:inline">Exemple suivant</span>
@@ -159,6 +160,7 @@ export default function TypesPage() {
                 )}
                 <button
                   onClick={close}
+                  aria-label="Fermer"
                   className="p-3 hover:bg-slate-200 rounded-full transition-colors text-slate-400 hover:text-slate-700"
                 >
                   <X size={28} />
