@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Question } from '../../../types';
 import { ArrowLeft, ArrowRight, Check, Layers } from 'lucide-react';
 
@@ -30,8 +30,8 @@ export const SortingQuestion: React.FC<SortingQuestionProps> = ({ question, onSo
     }
   }, [currentIndex, items.length, onSortComplete, results]);
 
-  const handleSort = (groupId: string, direction: 'left' | 'right') => {
-    if (currentIndex >= items.length) return;
+  const handleSort = useCallback((groupId: string, direction: 'left' | 'right') => {
+    if (animatingDir || currentIndex >= items.length) return;
 
     const currentItem = items[currentIndex];
     setAnimatingDir(direction);
@@ -45,7 +45,19 @@ export const SortingQuestion: React.FC<SortingQuestionProps> = ({ question, onSo
       setAnimatingDir(null);
       setCurrentIndex(prev => prev + 1);
     }, 250);
-  };
+  }, [animatingDir, currentIndex, items]);
+
+  // Keyboard: ← sorts into the first group, → into the second.
+  useEffect(() => {
+    const groups = question.groups;
+    if (!groups || groups.length < 2) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') handleSort(groups[0].id, 'left');
+      else if (e.key === 'ArrowRight') handleSort(groups[1].id, 'right');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleSort, question.groups]);
 
   if (!question.groups || question.groups.length < 2 || items.length === 0) {
     return <div>Configuration invalide pour le tri.</div>;

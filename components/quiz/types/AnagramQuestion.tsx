@@ -35,13 +35,11 @@ export const AnagramQuestion: React.FC<AnagramQuestionProps> = ({ question, onAn
   }, [question.id]);
 
   useEffect(() => {
-      // Form answer from placed tiles
-      const currentWord = placedTiles.map(t => t ? t.char : '').join('');
-      // Send partial or full answer for checking
-      if (placedTiles.every(t => t !== null)) {
-        onAnswer(currentWord);
-      }
-  }, [placedTiles]);
+      // Report the full word only once every slot is filled; otherwise clear it,
+      // so a removed tile can't leave a stale complete answer behind.
+      const allPlaced = placedTiles.length > 0 && placedTiles.every(t => t !== null);
+      onAnswer(allPlaced ? placedTiles.map(t => (t ? t.char : '')).join('') : "");
+  }, [placedTiles, onAnswer]);
 
   const handleBankClick = (tileId: string) => {
     // Move from bank to first empty slot

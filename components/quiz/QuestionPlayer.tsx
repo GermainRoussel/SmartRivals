@@ -32,6 +32,13 @@ import { PatternQuestion } from "@/components/quiz/types/PatternQuestion";
 type Status = "idle" | "done";
 type Feedback = "correct" | "incorrect";
 
+// Typed-input types that self-submit once their answer is "complete"
+// (anagram fully placed, wordle solved/lost) — no redundant "Valider" click.
+const AUTO_SUBMIT = new Set<QuestionType>([
+  QuestionType.ANAGRAM,
+  QuestionType.WORD_GUESS,
+]);
+
 interface QuestionPlayerProps {
   question: Question;
   /** Called once the question is resolved (validated, skipped or timed out). */
@@ -97,6 +104,14 @@ export function QuestionPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeUp]);
 
+  // Auto-submit types validate as soon as their answer becomes complete.
+  const autoSubmit = AUTO_SUBMIT.has(type);
+  useEffect(() => {
+    if (autoSubmit && status === "idle" && inputValue.trim().length > 0) {
+      validate();
+    }
+  }, [autoSubmit, status, inputValue, validate]);
+
   const isFilled = useMemo(() => {
     if (usesTextInput(type)) return inputValue.trim().length > 0;
     if (type === QuestionType.MATCHING) {
@@ -150,7 +165,7 @@ export function QuestionPlayer({
 
       {/* Action bar */}
       <div className="mt-8 flex items-center gap-3">
-        {!selfValidating && (
+        {!selfValidating && !autoSubmit && (
           <Button
             fullWidth
             size="lg"
@@ -170,6 +185,24 @@ export function QuestionPlayer({
                 : "Incorrect"
               : "Valider"}
           </Button>
+        )}
+
+        {autoSubmit && (
+          <div
+            className={`w-full text-center text-sm font-bold ${
+              feedback === "correct"
+                ? "text-green-600"
+                : feedback === "incorrect"
+                  ? "text-red-600"
+                  : "text-slate-400"
+            }`}
+          >
+            {frozen
+              ? feedback === "correct"
+                ? "Correct !"
+                : "Incorrect"
+              : "Validation automatique quand c'est complet"}
+          </div>
         )}
 
         {selfValidating && !frozen && (
