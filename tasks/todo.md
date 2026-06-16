@@ -19,18 +19,22 @@ Stack: Next.js 16 (App Router) · Supabase · Tailwind v4 · TS
 - [x] `CLAUDE.md` (project) + this file
 - [x] Verify: `build` ✓ `lint` ✓ + screenshot of the shell ✓
 
-## Phase 1 — Domain + content
+## Phase 1 — Domain + content ✅
 
-- [ ] Port `types.ts` → `types/` (Question, enums)
-- [ ] `lib/quiz/validation.ts` — single source of truth (de-duplicate v1 switch)
-- [ ] `lib/scoring.ts` — base + time + streak bonus (fix v1 accuracy bug)
-- [ ] Port the 21 question components → `components/quiz/types/`
-- [ ] `QuestionRenderer` — single type→component map
-- [ ] Seed question bank (`lib/quiz/bank.ts`) by theme/difficulty
-- [ ] Daily Quiz page (deterministic by date, timer, feedback)
-- [ ] Catalog `/types` playground (reuse renderer + validation)
-- [ ] Migrate chess to chess.js (legality + real checkmate); drop custom engine gaps
-- [ ] Configure `next/image` remotePatterns (unsplash, wikimedia, dicebear, flagcdn)
+- [x] Port `types.ts` → `types/index.ts` (Question, enums)
+- [x] `lib/quiz/validation.ts` — single source of truth (de-duplicated v1 switch)
+- [x] `lib/scoring.ts` — base + time + streak bonus (fixed v1 accuracy bug)
+- [x] Port the 18 wired question components → `components/quiz/types/`
+      (dropped orphaned Simon/Memory)
+- [x] `QuestionPlayer` — unified type→UI map + validate/skip (replaces v1 dup)
+- [x] Seed question bank (`lib/quiz/bank.ts`), deterministic daily by date
+- [x] Daily Quiz page (timer, scoring, streak, result screen)
+- [x] Catalog `/types` playground (reuses QuestionPlayer + validation)
+- [x] Migrate chess to chess.js (`lib/chess/board.ts` — real legality + checkmate);
+      removed custom engine + constants
+- [x] Verify: `build` ✓ `lint` ✓ (0 errors) + screenshots (order, true/false,
+      chess mate, blind test, connections)
+- [n/a] `next/image` remotePatterns — using `<img>` for arbitrary question images
 
 ## Phase 2 — Supabase: auth + persistence
 
@@ -64,3 +68,14 @@ Stack: Next.js 16 (App Router) · Supabase · Tailwind v4 · TS
 Foundation in place: Next.js 16 + Tailwind v4, full brand identity preserved
 (logo, S/R wordmark, Fredoka/Poppins, playful tokens). Visual shell + all routes
 browsable with placeholders. `build` and `lint` pass; shell verified by screenshot.
+
+### Phase 1
+The whole question domain is live and playable. v1's duplicated validation switch
+is now a single `lib/quiz/validation.ts`; scoring is centralised in `lib/scoring.ts`
+(accuracy bug fixed). All 18 wired question types render through one `QuestionPlayer`
+(used by both the Daily Quiz and the catalog — no duplication). Bank is seeded and
+the daily set is deterministic per date. Chess moved off the home-grown engine to
+**chess.js** (`lib/chess/board.ts`): real legal moves + genuine checkmate detection
+(verified by solving the rook mate-in-1). `build` green, `lint` 0 errors. Remaining
+lint warnings are intentional ported-component patterns (downgraded with rationale
+in `eslint.config.mjs`).
