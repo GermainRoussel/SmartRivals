@@ -121,3 +121,20 @@ RPC + a realtime wait. The game screen reuses the unified `QuestionPlayer`.
 Verified end-to-end with two authenticated users (scripts/verify-multiplayer.mjs:
 realtime join/start/score sync + matchmaking). Key fix for delivery: propagate
 the auth token to the socket (`realtime.setAuth`) before subscribing.
+
+---
+
+## Post-launch audit (deployed on `main`)
+
+Deep line-by-line review of the 21 question types vs validation + bank.
+
+- **P1 — broken-content types** ✅ Differences (real SVG diff scenes),
+  Pattern (real solvable SVG sequences), Blind Test (Web Audio synth, Safari-safe).
+- **P2 — bug fixes** ✅ Sorting ←/→ keyboard, Anagram stale value, Anagram/Wordle
+  auto-validation.
+- **P3 — tests** ✅ chess (fenToBoard/legalMoves/moveResult+mate), validation edge
+  cases, bank integrity, and jsdom component tests (Anagram/HoleText/TrueFalse +
+  QuestionPlayer auto-submit). 40 tests across 5 files. Test files excluded from
+  the Next build; run via `npm test`.
+- **P4 — content depth** (pending): more questions/themes; multiplayer host-leave,
+  in-game theme selection, result history.

@@ -113,3 +113,51 @@ describe("type helpers", () => {
     expect(isSelfValidating(QuestionType.MCQ)).toBe(false);
   });
 });
+
+describe("isAnswerCorrect — more formats & edge cases", () => {
+  it("IMAGE_MCQ / ODD_ONE_OUT / PATTERN / BLIND_TEST use exact equality", () => {
+    expect(isAnswerCorrect(q({ type: QuestionType.IMAGE_MCQ, correctAnswer: "Da Vinci" }), "Da Vinci")).toBe(true);
+    expect(isAnswerCorrect(q({ type: QuestionType.ODD_ONE_OUT, correctAnswer: "3" }), "3")).toBe(true);
+    expect(isAnswerCorrect(q({ type: QuestionType.PATTERN, correctAnswer: "B" }), "A")).toBe(false);
+    expect(isAnswerCorrect(q({ type: QuestionType.BLIND_TEST, correctAnswer: "Sirène" }), "Sirène")).toBe(true);
+  });
+
+  it("DIFFERENCES validates by distance to the target", () => {
+    const question = q({ type: QuestionType.DIFFERENCES, diffTarget: { x: 60, y: 40, tolerance: 14 } });
+    expect(isAnswerCorrect(question, { x: 64, y: 42 })).toBe(true);
+    expect(isAnswerCorrect(question, { x: 90, y: 40 })).toBe(false);
+  });
+
+  it("typed input is case-insensitive (anagram / rebus / word-guess)", () => {
+    expect(isAnswerCorrect(q({ type: QuestionType.ANAGRAM, correctAnswer: "PORTUGAL" }), "portugal")).toBe(true);
+    expect(isAnswerCorrect(q({ type: QuestionType.REBUS, correctAnswer: "I love coffee" }), "i love coffee")).toBe(true);
+    expect(isAnswerCorrect(q({ type: QuestionType.WORD_GUESS, correctAnswer: "TIGRE" }), "tigre")).toBe(true);
+  });
+
+  it("SLIDER with tolerance 0 needs the exact value", () => {
+    const question = q({ type: QuestionType.SLIDER, correctAnswer: 1912, tolerance: 0 });
+    expect(isAnswerCorrect(question, 1912)).toBe(true);
+    expect(isAnswerCorrect(question, 1913)).toBe(false);
+  });
+
+  it("rejects empty, null and partial answers", () => {
+    expect(isAnswerCorrect(q({ type: QuestionType.MCQ, correctAnswer: "A" }), null)).toBe(false);
+    expect(isAnswerCorrect(q({ type: QuestionType.INPUT, correctAnswer: "Paris" }), "")).toBe(false);
+    expect(isAnswerCorrect(q({ type: QuestionType.ORDER, correctAnswer: ["a", "b"] }), null)).toBe(false);
+
+    const matching = q({
+      type: QuestionType.MATCHING,
+      pairs: [{ left: "FR", right: "Paris" }, { left: "IT", right: "Rome" }],
+    });
+    expect(isAnswerCorrect(matching, { FR: "Paris" })).toBe(false); // partial
+
+    const sorting = q({
+      type: QuestionType.SORTING,
+      sortingItems: [
+        { id: "1", content: "x", correctGroupId: "F" },
+        { id: "2", content: "y", correctGroupId: "L" },
+      ],
+    });
+    expect(isAnswerCorrect(sorting, { "1": "F" })).toBe(false); // partial
+  });
+});
