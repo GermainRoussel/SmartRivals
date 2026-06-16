@@ -51,16 +51,22 @@ Stack: Next.js 16 (App Router) · Supabase · Tailwind v4 · TS
 - [x] Live smoke test ✓ (scripts/verify-supabase.mjs): signup trigger → profile,
       attempt persistence, weekly_leaderboard view; configured app: auth guard +
       enabled login verified in-browser
-- [ ] (optional) Google OAuth provider
+- [x] Google OAuth: button + flow; provider enabled & verified (authorize ->
+      accounts.google.com with valid client_id + redirect_uri)
 - [ ] (optional) mirror question bank into DB
 
-## Phase 3 — Realtime multiplayer
+## Phase 3 — Realtime multiplayer ✅
 
-- [ ] Tables: rooms, room_players, matchmaking_queue (+ RLS)
-- [ ] Create / join private room by code (Presence)
-- [ ] Public matchmaking (queue)
-- [ ] Live game: synced questions + live scoreboard (Realtime)
-- [ ] Persist results
+- [x] Schema `0002_multiplayer.sql`: rooms, room_players, matchmaking_queue
+      (+ RLS + Realtime publication + replica identity full)
+- [x] `find_or_create_match` RPC (atomic pair-or-enqueue)
+- [x] `lib/multiplayer.ts` (room ops) + `useRoom` realtime hook
+- [x] Menu: public matchmaking (queue + realtime match) + private create/join by code
+- [x] Room: lobby (live players, host start) → live game (shared deadline,
+      synced questions, live scoreboard) → results, reusing QuestionPlayer
+- [x] Verified end-to-end (scripts/verify-multiplayer.mjs): realtime join/start/score
+      sync with 2 authenticated users + RLS, matchmaking RPC. build ✓ lint ✓
+- [ ] (later) host-leave handling, per-room result persistence to history
 
 ## Phase 4 — Polish + verify
 
@@ -99,3 +105,16 @@ Daily Quiz persists results. Everything degrades gracefully when Supabase is abs
 (`isSupabaseConfigured`). End-to-end verified with `scripts/verify-supabase.mjs`
 (trigger → persistence → leaderboard, then cleanup) and in-browser (guard +
 enabled login). Migrations run via `npm run db:migrate -- <file.sql>`.
+
+### Phase 3
+Realtime multiplayer on Supabase. `0002_multiplayer.sql` adds rooms /
+room_players / matchmaking_queue with RLS, the Realtime publication, and an
+atomic `find_or_create_match` RPC. The client uses the browser Supabase client +
+`useRoom` (postgres_changes on the room and its players); the host drives
+question progression off a shared `question_ends_at` deadline so every client
+stays in sync, and each player writes only their own score row (live
+scoreboard). Private rooms join by 6-char code; public play uses the matchmaking
+RPC + a realtime wait. The game screen reuses the unified `QuestionPlayer`.
+Verified end-to-end with two authenticated users (scripts/verify-multiplayer.mjs:
+realtime join/start/score sync + matchmaking). Key fix for delivery: propagate
+the auth token to the socket (`realtime.setAuth`) before subscribing.

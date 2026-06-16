@@ -580,15 +580,28 @@ export function todayKey(date = new Date()): string {
   return date.toISOString().slice(0, 10);
 }
 
+const ALL_QUESTIONS: Question[] = Object.values(SAMPLES).flat();
+const QUESTION_BY_ID = new Map(ALL_QUESTIONS.map((q) => [q.id, q]));
+
+export function getQuestionsByIds(ids: string[]): Question[] {
+  return ids
+    .map((id) => QUESTION_BY_ID.get(id))
+    .filter((q): q is Question => Boolean(q));
+}
+
 /**
- * Pick `count` questions for the given day — one per format, deterministically,
- * so every player gets the same varied set and it rotates each day.
+ * Pick `count` question ids deterministically from `seed` — one per format,
+ * so everyone sharing the seed (a day, a room) gets the same varied set.
  */
-export function getDailyQuestions(dateKey: string, count = 10): Question[] {
-  const rng = mulberry32(hashString(dateKey));
+export function pickQuestionIds(seed: string, count = 10): string[] {
+  const rng = mulberry32(hashString(seed));
   const types = seededShuffle(CATALOG_TYPES, rng).slice(0, count);
   return types.map((type) => {
     const pool = SAMPLES[type]!;
-    return pool[Math.floor(rng() * pool.length)];
+    return pool[Math.floor(rng() * pool.length)].id;
   });
+}
+
+export function getDailyQuestions(dateKey: string, count = 10): Question[] {
+  return getQuestionsByIds(pickQuestionIds(dateKey, count));
 }
