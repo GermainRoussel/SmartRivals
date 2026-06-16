@@ -74,8 +74,10 @@ Stack: Next.js 16 (App Router) · Supabase · Tailwind v4 · TS
       daily, catalog, multiplayer, profile, leaderboard
 - [x] Responsive (login verified on mobile) + a11y (aria-labels on icon buttons)
 - [x] Vitest + unit tests for validation (13) + scoring (7) — `npm test`, 20 pass
-- [ ] Deploy to Vercel + env wiring (user-side; instructions provided)
-- [ ] Remove `legacy/` (port complete; recoverable from `main`) — pending confirm
+- [x] Remove `legacy/` (port complete; recoverable from pre-rebuild git history);
+      cleaned the now-pointless legacy excludes (tsconfig/eslint/vitest)
+- [~] Deploy to Vercel: rebuild merged to `main` for deployment; env wiring +
+      Supabase URL config are user-side (instructions provided)
 
 ---
 

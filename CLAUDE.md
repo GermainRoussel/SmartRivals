@@ -14,10 +14,9 @@ The UI is playful, rounded, kid-friendly, **in French**. Preserving this visual
 identity is a hard requirement — it is the soul of the product.
 
 > History: v1 was a Google AI Studio export (Vite SPA, CDN Tailwind, everything
-> mocked). It is being rebuilt from scratch on branch `rebuild/v2-nextjs-supabase`.
-> The original source is preserved under `legacy/` purely as porting reference and
-> will be deleted once the port is complete. **`legacy/` is excluded from build,
-> typecheck and lint — never import from it.**
+> mocked). It was rebuilt from scratch on Next.js 16 + Supabase; the rebuild now
+> lives on `main`. The v1 source sat under `legacy/` during the port and has been
+> removed — it stays recoverable from the pre-rebuild git history if ever needed.
 
 ## Stack
 
