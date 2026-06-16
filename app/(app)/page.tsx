@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { BrandName } from "@/components/ui/BrandName";
+import { getProfile } from "@/lib/auth";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const profile = await getProfile();
   return (
     <div className="space-y-8 w-full max-w-6xl mx-auto mt-4 pb-24 md:pb-0 px-4">
       {/* Hero */}
@@ -19,7 +21,7 @@ export default function HomePage() {
 
         <div className="relative z-10 flex flex-col items-center w-full">
           <h2 className="text-2xl md:text-3xl font-display font-bold text-slate-600 mb-2">
-            Bienvenue <span className="text-blue-600">Joueur</span> !
+            Bienvenue <span className="text-blue-600">{profile?.username ?? "Joueur"}</span> !
           </h2>
 
           <div className="flex items-center justify-center mb-4 w-full">

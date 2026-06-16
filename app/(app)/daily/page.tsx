@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { QuestionPlayer } from "@/components/quiz/QuestionPlayer";
 import { getDailyQuestions, todayKey } from "@/lib/quiz/bank";
 import { computePoints, nextStreak, maxPointsPerQuestion } from "@/lib/scoring";
+import { saveDailyAttempt } from "@/app/actions/quiz";
 
 const MAX_TIME = 15;
 const FEEDBACK_MS = 1500;
@@ -26,8 +27,22 @@ export default function DailyPage() {
   const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
 
   const streakRef = useRef(0);
+  const savedRef = useRef(false);
   const currentQ = questions[index];
   const finished = index >= questions.length;
+
+  // Persist the result once, when the quiz ends (no-op if not signed in).
+  useEffect(() => {
+    if (finished && started && !savedRef.current) {
+      savedRef.current = true;
+      void saveDailyAttempt({
+        score,
+        correctCount: correct,
+        total: questions.length,
+        maxStreak,
+      });
+    }
+  }, [finished, started, score, correct, questions.length, maxStreak]);
 
   // Per-question countdown.
   useEffect(() => {

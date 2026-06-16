@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { BrandName } from "@/components/ui/BrandName";
+import { signOut } from "@/app/actions/auth";
 import { NAV_ITEMS } from "./nav";
 
 export const Sidebar: React.FC = () => {
@@ -41,13 +42,15 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       <div className="p-6">
-        <button
-          type="button"
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-2xl hover:bg-red-50 text-slate-500 hover:text-red-500 transition-colors font-bold"
-        >
-          <LogOut size={20} strokeWidth={2.5} />
-          Déconnexion
-        </button>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="flex items-center gap-3 px-4 py-3 w-full rounded-2xl hover:bg-red-50 text-slate-500 hover:text-red-500 transition-colors font-bold"
+          >
+            <LogOut size={20} strokeWidth={2.5} />
+            Déconnexion
+          </button>
+        </form>
       </div>
     </aside>
   );

@@ -36,13 +36,23 @@ Stack: Next.js 16 (App Router) · Supabase · Tailwind v4 · TS
       chess mate, blind test, connections)
 - [n/a] `next/image` remotePatterns — using `<img>` for arbitrary question images
 
-## Phase 2 — Supabase: auth + persistence
+## Phase 2 — Supabase: auth + persistence (code ✅ — awaiting creds to go live)
 
-- [ ] Create Supabase project, wire env
-- [ ] Migrations: profiles, questions, daily_quizzes, quiz_attempts (+ RLS)
-- [ ] Auth (magic link + Google), middleware guard, replace fake login
-- [ ] Seed questions into DB
-- [ ] Persist attempts → real Profile stats + real Leaderboard (weekly chart)
+- [x] SQL schema `supabase/migrations/0001_init.sql`: profiles, quiz_attempts,
+      weekly_leaderboard view, RLS, signup trigger
+- [x] Supabase helpers: client/server/proxy + `isSupabaseConfigured` (graceful
+      degradation while unconfigured — app stays browsable)
+- [x] Auth: magic-link login, `/auth/callback`, `proxy.ts` session guard (Next 16
+      proxy convention), signOut wired to Sidebar
+- [x] Home shows real username; Profile real stats; Leaderboard real data + chart
+- [x] Persist daily attempt (server action, no-op when signed out)
+- [x] Verify: build ✓ lint ✓; unconfigured app verified (login + profile fallbacks)
+- [x] Wire `.env.local` (project eu-west-1) + apply `0001_init.sql` via `scripts/db-exec.mjs`
+- [x] Live smoke test ✓ (scripts/verify-supabase.mjs): signup trigger → profile,
+      attempt persistence, weekly_leaderboard view; configured app: auth guard +
+      enabled login verified in-browser
+- [ ] (optional) Google OAuth provider
+- [ ] (optional) mirror question bank into DB
 
 ## Phase 3 — Realtime multiplayer
 
@@ -79,3 +89,13 @@ the daily set is deterministic per date. Chess moved off the home-grown engine t
 (verified by solving the rook mate-in-1). `build` green, `lint` 0 errors. Remaining
 lint warnings are intentional ported-component patterns (downgraded with rationale
 in `eslint.config.mjs`).
+
+### Phase 2
+Supabase is live on project `hybcxbjuqpbnkgdgzwed` (eu-west-1). Schema applied
+(`0001_init.sql`): profiles + quiz_attempts + weekly_leaderboard view, RLS, and a
+signup trigger that auto-creates a profile. Auth is magic-link (`/auth/callback`,
+Next 16 `proxy.ts` session guard); Home/Profile/Leaderboard read real data and the
+Daily Quiz persists results. Everything degrades gracefully when Supabase is absent
+(`isSupabaseConfigured`). End-to-end verified with `scripts/verify-supabase.mjs`
+(trigger → persistence → leaderboard, then cleanup) and in-browser (guard +
+enabled login). Migrations run via `npm run db:migrate -- <file.sql>`.
