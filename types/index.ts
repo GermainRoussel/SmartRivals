@@ -63,7 +63,8 @@ export interface Question {
   fen?: string; // For Chess
   items?: { id: string; content: string }[]; // For Order
   imageUrl?: string; // Context image for the question
-  audioUrl?: string; // For Blind Test
+  audioUrl?: string; // For Blind Test (legacy external file — unused)
+  soundId?: string; // For Blind Test (synthesised sound, see lib/audio.ts)
   
   // Matching
   pairs?: { left: string; right: string }[]; 

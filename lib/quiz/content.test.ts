@@ -1,0 +1,69 @@
+import { describe, it, expect } from "vitest";
+import { SAMPLES } from "@/lib/quiz/bank";
+import { isAnswerCorrect } from "@/lib/quiz/validation";
+import { DIFFERENCE_SCENES } from "@/lib/quiz/differences";
+import { PATTERN_PUZZLES } from "@/lib/quiz/patterns";
+import { Question, QuestionType } from "@/types";
+
+// Types whose stored `correctAnswer` IS exactly what validation receives,
+// so the canonical answer must validate. (Excludes MATCHING/SORTING/HOLE_TEXT,
+// whose answer is derived, and the self-validating CHESS/CONNECTIONS.)
+const DIRECT_ANSWER_TYPES = new Set<QuestionType>([
+  QuestionType.MCQ,
+  QuestionType.IMAGE_MCQ,
+  QuestionType.BLIND_TEST,
+  QuestionType.ODD_ONE_OUT,
+  QuestionType.PATTERN,
+  QuestionType.TRUE_FALSE,
+  QuestionType.INPUT,
+  QuestionType.ANAGRAM,
+  QuestionType.PIXEL_REVEAL,
+  QuestionType.MATH_PUZZLE,
+  QuestionType.REBUS,
+  QuestionType.WORD_GUESS,
+  QuestionType.SLIDER,
+  QuestionType.ORDER,
+  QuestionType.HOTSPOT,
+  QuestionType.DIFFERENCES,
+]);
+
+const allSamples: Question[] = Object.values(SAMPLES).flat();
+
+describe("question bank integrity", () => {
+  it("every sample has a unique id", () => {
+    const ids = allSamples.map((q) => q.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("the canonical correct answer validates for every direct-answer type", () => {
+    for (const q of allSamples) {
+      if (!DIRECT_ANSWER_TYPES.has(q.type)) continue;
+      expect(
+        isAnswerCorrect(q, q.correctAnswer),
+        `${q.id} (${q.type}) should accept its own correctAnswer`,
+      ).toBe(true);
+    }
+  });
+});
+
+describe("generated 'spot the difference' scenes", () => {
+  it("produce valid, distinct left/right SVGs with an in-bounds target", () => {
+    for (const s of DIFFERENCE_SCENES) {
+      expect(decodeURIComponent(s.left)).toContain("<svg");
+      expect(s.left).not.toBe(s.right); // there IS a difference
+      expect(s.target.x).toBeGreaterThanOrEqual(0);
+      expect(s.target.x).toBeLessThanOrEqual(100);
+      expect(s.target.tolerance).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("generated logic patterns", () => {
+  it("each puzzle's correctId is one of its options", () => {
+    for (const p of PATTERN_PUZZLES) {
+      expect(decodeURIComponent(p.grid)).toContain("<svg");
+      expect(p.options.length).toBeGreaterThan(1);
+      expect(p.options.map((o) => o.id)).toContain(p.correctId);
+    }
+  });
+});
