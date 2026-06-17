@@ -25,6 +25,9 @@ export interface RoomPlayer {
   score: number;
   is_ready: boolean;
   finished: boolean;
+  /** Index of the last question this player answered (-1 = none yet).
+   *  Optional: absent until the 0008_answered_index migration is applied. */
+  answered_index?: number;
   joined_at: string;
   profiles?: { username: string; avatar_url: string | null } | null;
 }
@@ -97,6 +100,21 @@ export async function setScore(roomId: string, score: number): Promise<void> {
   await supabase
     .from("room_players")
     .update({ score })
+    .eq("room_id", roomId)
+    .eq("user_id", me);
+}
+
+/**
+ * Mark that the current player has answered question `index`. Lets the host
+ * advance early once everyone has answered. Tolerant of the column being absent
+ * (pre-0008 migration) — it just no-ops and play falls back to the countdown.
+ */
+export async function setAnswered(roomId: string, index: number): Promise<void> {
+  const supabase = createClient();
+  const me = await uid();
+  await supabase
+    .from("room_players")
+    .update({ answered_index: index })
     .eq("room_id", roomId)
     .eq("user_id", me);
 }

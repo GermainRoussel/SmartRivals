@@ -12,6 +12,7 @@ import {
   leaveRoom,
   startGame,
   setScore,
+  setAnswered,
   advanceQuestion,
   promoteHost,
   recordMatchResult,
@@ -40,6 +41,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
   const answeredRef = useRef(-1);
   const promotingRef = useRef(false);
   const recordedRef = useRef(false);
+  const advancedRef = useRef(-1);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -71,6 +73,27 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     );
     return () => clearTimeout(t);
   }, [room, isHost, roomId]);
+
+  // Everyone present has answered the current question (used to advance early).
+  const allAnswered = useMemo(
+    () =>
+      room?.status === "playing" &&
+      players.length > 0 &&
+      players.every((p) => (p.answered_index ?? -1) >= idx),
+    [room?.status, players, idx],
+  );
+
+  // Host: as soon as everyone has answered, skip the rest of the countdown.
+  // (Stable deps — players churn doesn't re-arm/cancel the short delay.)
+  useEffect(() => {
+    if (!isHost || !allAnswered || advancedRef.current >= idx) return;
+    advancedRef.current = idx;
+    const t = setTimeout(
+      () => void advanceQuestion(roomId, idx + 1, total, MP_QUESTION_MS),
+      900, // brief pause so the last answer's feedback is visible
+    );
+    return () => clearTimeout(t);
+  }, [isHost, allAnswered, idx, total, roomId]);
 
   // If the host has left, promote the next player so the game can resume.
   useEffect(() => {
@@ -107,6 +130,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
       scoreRef.current += computePoints({ isCorrect, timeRemaining: timeLeft, streak: streakRef.current });
       streakRef.current = nextStreak(streakRef.current, isCorrect);
       void setScore(roomId, scoreRef.current);
+      // Stamp this question as answered (no-op if the column isn't there yet).
+      void setAnswered(roomId, idx).catch(() => {});
     },
     [idx, timeLeft, roomId],
   );
