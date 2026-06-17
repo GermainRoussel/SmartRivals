@@ -36,24 +36,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
         )}
       </div>
 
-      {/* Collapse / expand toggle */}
-      <button
-        onClick={onToggle}
-        aria-label={collapsed ? "Agrandir le menu" : "Réduire le menu"}
-        title={collapsed ? "Agrandir le menu" : "Réduire le menu"}
-        className={`mb-2 mx-4 flex items-center rounded-xl text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors ${
-          collapsed ? "justify-center p-2" : "justify-end gap-1 px-3 py-2 text-xs font-bold uppercase tracking-wider"
-        }`}
-      >
-        {collapsed ? (
-          <ChevronRight size={20} />
-        ) : (
-          <>
-            Réduire <ChevronLeft size={16} />
-          </>
-        )}
-      </button>
-
       <nav className={`flex-1 space-y-3 ${collapsed ? "px-3" : "px-4"}`}>
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.path;
@@ -78,7 +60,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
         })}
       </nav>
 
-      <div className={collapsed ? "p-3" : "p-6"}>
+      <div className={`space-y-1 ${collapsed ? "p-3" : "p-6"}`}>
+        {/* Collapse / expand toggle */}
+        <button
+          onClick={onToggle}
+          aria-label={collapsed ? "Agrandir le menu" : "Réduire le menu"}
+          title={collapsed ? "Agrandir le menu" : "Réduire le menu"}
+          className={`flex items-center w-full rounded-2xl text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors font-bold ${
+            collapsed ? "justify-center p-3" : "gap-3 px-4 py-3"
+          }`}
+        >
+          {collapsed ? (
+            <ChevronRight size={20} />
+          ) : (
+            <>
+              <ChevronLeft size={20} strokeWidth={2.5} />
+              Réduire
+            </>
+          )}
+        </button>
+
         <form action={signOut}>
           <button
             type="submit"
