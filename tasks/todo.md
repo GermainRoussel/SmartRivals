@@ -136,5 +136,9 @@ Deep line-by-line review of the 21 question types vs validation + bank.
   cases, bank integrity, and jsdom component tests (Anagram/HoleText/TrueFalse +
   QuestionPlayer auto-submit). 40 tests across 5 files. Test files excluded from
   the Next build; run via `npm test`.
-- **P4 — content depth** (pending): more questions/themes; multiplayer host-leave,
-  in-game theme selection, result history.
+- **P4 — content depth** ✅ (content) Bank roughly doubled: +2-3 questions across
+  MCQ, T/F, Input, Slider, Anagram, Word-guess, Math, Order, Odd-one-out, Matching,
+  Sorting, Hole-text, Connections, Blind-test, Image-MCQ, + 2 verified chess mates.
+  New chess integrity test asserts every puzzle's solution is a real mate.
+  - Still pending (multiplayer): host-leave handling, in-game theme/difficulty
+    selection, result history.

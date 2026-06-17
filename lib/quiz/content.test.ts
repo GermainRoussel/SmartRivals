@@ -3,6 +3,7 @@ import { SAMPLES } from "@/lib/quiz/bank";
 import { isAnswerCorrect } from "@/lib/quiz/validation";
 import { DIFFERENCE_SCENES } from "@/lib/quiz/differences";
 import { PATTERN_PUZZLES } from "@/lib/quiz/patterns";
+import { moveResult } from "@/lib/chess/board";
 import { Question, QuestionType } from "@/types";
 
 // Types whose stored `correctAnswer` IS exactly what validation receives,
@@ -64,6 +65,17 @@ describe("generated logic patterns", () => {
       expect(decodeURIComponent(p.grid)).toContain("<svg");
       expect(p.options.length).toBeGreaterThan(1);
       expect(p.options.map((o) => o.id)).toContain(p.correctId);
+    }
+  });
+});
+
+describe("chess puzzles", () => {
+  it("every chess sample's stored solution is a real checkmate", () => {
+    for (const cq of SAMPLES[QuestionType.CHESS] ?? []) {
+      const [from, to] = String(cq.correctAnswer).split("-");
+      const r = moveResult(cq.fen!, from, to);
+      expect(r, `${cq.id}: ${cq.correctAnswer} should be legal`).not.toBeNull();
+      expect(r?.isCheckmate, `${cq.id}: ${cq.correctAnswer} should be mate`).toBe(true);
     }
   });
 });
