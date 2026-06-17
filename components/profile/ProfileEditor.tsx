@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, Loader2, Dice5, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { BrandName } from "@/components/ui/BrandName";
 import { createClient } from "@/lib/supabase/client";
 import { updateProfile } from "@/app/actions/profile";
 import type { Profile } from "@/lib/auth";
@@ -73,9 +74,21 @@ export function ProfileEditor({
 
   return (
     <div className="max-w-xl mx-auto mt-4 bg-white p-8 rounded-[32px] shadow-sm border border-slate-100">
-      <h2 className="font-display text-3xl font-bold text-slate-800 mb-8 text-center">
-        Modifier le profil
-      </h2>
+      {welcome ? (
+        <div className="mb-8 flex flex-col items-center text-center">
+          <h2 className="font-display text-3xl font-bold text-slate-800 mb-1">
+            Bienvenue sur
+          </h2>
+          <BrandName className="text-3xl mb-3" />
+          <p className="text-slate-500">
+            Personnalisez votre profil pour commencer l&apos;aventure.
+          </p>
+        </div>
+      ) : (
+        <h2 className="font-display text-3xl font-bold text-slate-800 mb-8 text-center">
+          Modifier le profil
+        </h2>
+      )}
 
       {/* Avatar */}
       <div className="flex flex-col items-center mb-8">
@@ -161,11 +174,16 @@ export function ProfileEditor({
       )}
 
       <div className="flex gap-3">
-        <Button variant="ghost" fullWidth onClick={() => router.push("/profile")} disabled={saving}>
-          Annuler
+        <Button
+          variant="ghost"
+          fullWidth
+          onClick={() => router.push(welcome ? "/" : "/profile")}
+          disabled={saving}
+        >
+          {welcome ? "Plus tard" : "Annuler"}
         </Button>
         <Button fullWidth size="lg" onClick={save} disabled={saving || username.trim().length < 2}>
-          {saving ? <Loader2 className="animate-spin" /> : "Enregistrer"}
+          {saving ? <Loader2 className="animate-spin" /> : welcome ? "C'est parti !" : "Enregistrer"}
         </Button>
       </div>
     </div>

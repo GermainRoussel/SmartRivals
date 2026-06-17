@@ -177,3 +177,9 @@ participation + win), public `avatars` storage bucket (owner-write by folder).
 Verified: XP trigger + avatars bucket via `scripts/verify-supabase.mjs`. 56 tests.
 Nice-to-have next: unique usernames, achievement unlock timestamps/toasts,
 mp stats on public profiles (would need match_results read policy change).
+
+- **Onboarding** ✅ `0006_onboarding.sql` adds a `profiles.onboarded` flag (existing
+  accounts backfilled to true). The auth callback sends brand-new accounts to
+  `/profile/edit?welcome=1` once; `updateProfile` sets `onboarded = true` on save.
+  The editor shows a "Bienvenue sur SmartRivals" state in welcome mode (greeting +
+  "Plus tard"/"C'est parti !" CTAs). build ✓ lint ✓ (0 errors) · 56 tests.
