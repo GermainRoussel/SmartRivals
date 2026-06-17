@@ -14,13 +14,6 @@ function mondayOfThisWeek(): Date {
   return monday;
 }
 
-const ACCENTS = {
-  blue: { hover: "hover:border-blue-200", blob: "bg-blue-50", icon: "bg-blue-100 text-blue-600" },
-  red: { hover: "hover:border-red-200", blob: "bg-red-50", icon: "bg-red-100 text-red-600" },
-  yellow: { hover: "hover:border-yellow-200", blob: "bg-yellow-50", icon: "bg-yellow-100 text-yellow-600" },
-  purple: { hover: "hover:border-purple-200", blob: "bg-purple-50", icon: "bg-purple-100 text-purple-600" },
-} as const;
-
 export default async function HomePage() {
   const profile = await getProfile();
 
@@ -30,7 +23,6 @@ export default async function HomePage() {
   let weeklyRank: number | null = null;
   let mpWins = 0;
   let dailyStreak = 0;
-  let playedToday = false;
 
   if (profile) {
     const supabase = await createClient();
@@ -43,8 +35,6 @@ export default async function HomePage() {
     const list = attempts ?? [];
 
     dailyStreak = computeDailyStreak(list.map((a) => a.quiz_date as string));
-    const today = new Date().toISOString().slice(0, 10);
-    playedToday = list.some((a) => a.quiz_date === today);
 
     const monday = mondayOfThisWeek();
     weekScore = list
@@ -143,44 +133,6 @@ export default async function HomePage() {
         </div>
       )}
 
-      {/* Menu grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <NavCard
-          href="/daily"
-          emoji="📅"
-          title="Quizz du Jour"
-          desc="Challenge quotidien unique. Grimpez dans le classement !"
-          accent="blue"
-          badge={
-            profile
-              ? playedToday
-                ? { text: "✓ Fait aujourd'hui", cls: "bg-green-100 text-green-700" }
-                : { text: "À jouer", cls: "bg-amber-100 text-amber-700 animate-pulse" }
-              : null
-          }
-        />
-        <NavCard
-          href="/multiplayer"
-          emoji="⚔️"
-          title="Multijoueur"
-          desc="Défiez d'autres joueurs en temps réel."
-          accent="red"
-        />
-        <NavCard
-          href="/leaderboard"
-          emoji="🏆"
-          title="Classement"
-          desc="Voir les meilleurs joueurs de la semaine."
-          accent="yellow"
-        />
-        <NavCard
-          href="/types"
-          emoji="🧩"
-          title="Types de Quizz"
-          desc="Explorez tous les formats de questions."
-          accent="purple"
-        />
-      </div>
     </div>
   );
 }
@@ -201,40 +153,3 @@ function StatTile({ emoji, value, label }: { emoji: string; value: string | numb
   );
 }
 
-function NavCard({
-  href,
-  emoji,
-  title,
-  desc,
-  accent,
-  badge,
-}: {
-  href: string;
-  emoji: string;
-  title: string;
-  desc: string;
-  accent: keyof typeof ACCENTS;
-  badge?: { text: string; cls: string } | null;
-}) {
-  const a = ACCENTS[accent];
-  return (
-    <Link
-      href={href}
-      className={`bg-white p-8 rounded-[40px] shadow-sm border-4 border-slate-100 ${a.hover} hover:shadow-lg transition-all group relative overflow-hidden min-h-[180px] flex flex-col justify-center`}
-    >
-      <div className={`absolute top-0 right-0 w-40 h-40 ${a.blob} rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150`} />
-      {badge && (
-        <span className={`absolute top-6 right-7 z-10 px-3 py-1 rounded-full text-xs font-bold ${badge.cls}`}>
-          {badge.text}
-        </span>
-      )}
-      <div className="relative z-10">
-        <div className={`w-14 h-14 ${a.icon} rounded-2xl flex items-center justify-center mb-3 group-hover:rotate-12 transition-transform shadow-sm`}>
-          <span className="text-3xl">{emoji}</span>
-        </div>
-        <h3 className="font-display font-bold text-2xl md:text-3xl text-slate-800 mb-1">{title}</h3>
-        <p className="text-slate-500 font-medium text-base md:text-lg">{desc}</p>
-      </div>
-    </Link>
-  );
-}
