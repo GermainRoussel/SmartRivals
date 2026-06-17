@@ -1,11 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, Loader2, Dice5, Check } from "lucide-react";
+import { Loader2, Dice5, Check, Images } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { BrandName } from "@/components/ui/BrandName";
-import { createClient } from "@/lib/supabase/client";
 import { updateProfile } from "@/app/actions/profile";
 import type { Profile } from "@/lib/auth";
 
@@ -15,6 +14,14 @@ function dicebear(style: string, seed: string) {
   return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed || "SmartRivals")}`;
 }
 
+// Ordered catalog of selectable avatars: every style crossed with a fixed,
+// ordered list of seeds (style-major order, so variations of one look stay grouped).
+const SEEDS = [
+  "Alex", "Bea", "Cleo", "Dan", "Eli", "Fay",
+  "Gus", "Hana", "Ivy", "Jo", "Kit", "Lou",
+];
+const AVATARS = STYLES.flatMap((style) => SEEDS.map((seed) => dicebear(style, seed)));
+
 export function ProfileEditor({
   profile,
   welcome = false,
@@ -23,41 +30,16 @@ export function ProfileEditor({
   welcome?: boolean;
 }) {
   const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const [username, setUsername] = useState(profile.username);
   const [bio, setBio] = useState(profile.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(profile.avatar_url);
   const [seed, setSeed] = useState(profile.username || "SmartRivals");
-  const [uploading, setUploading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const preview = avatarUrl || dicebear("avataaars", seed);
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) return setError("Choisissez une image.");
-    if (file.size > 3 * 1024 * 1024) return setError("Image trop lourde (max 3 Mo).");
-    setError(null);
-    setUploading(true);
-    try {
-      const supabase = createClient();
-      const ext = file.name.split(".").pop() || "png";
-      const path = `${profile.id}/avatar-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("avatars")
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (upErr) throw upErr;
-      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      setAvatarUrl(data.publicUrl);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const save = async () => {
     setSaving(true);
@@ -98,50 +80,46 @@ export function ProfileEditor({
           className="w-28 h-28 rounded-full bg-slate-100 border-4 border-white shadow-lg mb-4 object-cover"
         />
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
-            {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} className="mr-1" />}
-            Importer
+          <Button variant="outline" size="sm" onClick={() => setPickerOpen((open) => !open)}>
+            <Images size={16} className="mr-1" /> Choisir un avatar
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              setSeed(Math.random().toString(36).slice(2));
-              setAvatarUrl(null);
-            }}
+            onClick={() => setAvatarUrl(AVATARS[Math.floor(Math.random() * AVATARS.length)])}
           >
             <Dice5 size={16} className="mr-1" /> Aléatoire
           </Button>
         </div>
-        <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleUpload} />
       </div>
 
-      {/* DiceBear styles */}
-      <div className="mb-8">
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-3">
-          Styles d&apos;avatar
-        </span>
-        <div className="grid grid-cols-6 gap-2">
-          {STYLES.map((style) => {
-            const url = dicebear(style, seed);
-            const active = avatarUrl === url;
-            return (
-              <button
-                key={style}
-                onClick={() => setAvatarUrl(url)}
-                className={`relative aspect-square rounded-2xl border-2 p-1 transition-all ${
-                  active ? "border-primary ring-2 ring-blue-100" : "border-slate-200 hover:border-blue-300"
-                }`}
-              >
-                <img src={url} alt={style} className="w-full h-full" />
-                {active && (
-                  <Check size={14} className="absolute top-1 right-1 text-white bg-primary rounded-full p-0.5" />
-                )}
-              </button>
-            );
-          })}
+      {/* Avatar gallery — ordered catalog, revealed on demand */}
+      {pickerOpen && (
+        <div className="mb-8">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-3">
+            Choisissez votre avatar
+          </span>
+          <div className="grid grid-cols-6 gap-2 max-h-72 overflow-y-auto pr-1">
+            {AVATARS.map((url) => {
+              const active = avatarUrl === url;
+              return (
+                <button
+                  key={url}
+                  onClick={() => setAvatarUrl(url)}
+                  className={`relative aspect-square rounded-2xl border-2 p-1 transition-all ${
+                    active ? "border-primary ring-2 ring-blue-100" : "border-slate-200 hover:border-blue-300"
+                  }`}
+                >
+                  <img src={url} alt="Avatar" className="w-full h-full" />
+                  {active && (
+                    <Check size={14} className="absolute top-1 right-1 text-white bg-primary rounded-full p-0.5" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Username */}
       <label className="block font-bold text-slate-700 mb-1">Pseudo</label>
