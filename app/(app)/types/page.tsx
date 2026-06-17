@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   X,
   Play,
@@ -28,11 +28,12 @@ import {
   SpellCheck,
   ScanSearch,
   BoxSelect,
+  SlidersHorizontal,
   LucideIcon,
 } from "lucide-react";
 import { QuestionPlayer } from "@/components/quiz/QuestionPlayer";
 import { SAMPLES, CATALOG_TYPES } from "@/lib/quiz/bank";
-import { QuestionType } from "@/types";
+import { Question, QuestionType, QuestionTheme, QuestionDifficulty } from "@/types";
 
 const TYPE_INFO: Record<QuestionType, { label: string; icon: LucideIcon; desc: string }> = {
   [QuestionType.MCQ]: { label: "QCM Classique", icon: ListOrdered, desc: "Choisissez la bonne réponse parmi 4 propositions." },
@@ -59,14 +60,48 @@ const TYPE_INFO: Record<QuestionType, { label: string; icon: LucideIcon; desc: s
   [QuestionType.SIMON]: { label: "Simon", icon: Grid3X3, desc: "" },
 };
 
+// Difficulty pills, ordered easiest → hardest, with a brand-friendly colour.
+const DIFFICULTY_FILTERS: { value: QuestionDifficulty; activeCls: string }[] = [
+  { value: QuestionDifficulty.EASY, activeCls: "bg-green-500 border-green-600 text-white" },
+  { value: QuestionDifficulty.MEDIUM, activeCls: "bg-blue-500 border-blue-600 text-white" },
+  { value: QuestionDifficulty.HARD, activeCls: "bg-orange-500 border-orange-600 text-white" },
+  { value: QuestionDifficulty.EXPERT, activeCls: "bg-purple-600 border-purple-700 text-white" },
+];
+
+const ALL_THEMES = Object.values(QuestionTheme);
+
 export default function TypesPage() {
   const [activeType, setActiveType] = useState<QuestionType | null>(null);
   const [exampleIndex, setExampleIndex] = useState(0);
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<"correct" | "incorrect" | null>(null);
 
-  const samples = activeType ? SAMPLES[activeType] ?? [] : [];
+  // Catalog filters (also drive which sample variants the test modal cycles).
+  const [themeFilter, setThemeFilter] = useState<QuestionTheme | "ALL">("ALL");
+  const [diffFilter, setDiffFilter] = useState<QuestionDifficulty | "ALL">("ALL");
+
+  const matchesFilter = useCallback(
+    (q: Question) =>
+      (themeFilter === "ALL" || q.theme === themeFilter) &&
+      (diffFilter === "ALL" || q.difficulty === diffFilter),
+    [themeFilter, diffFilter],
+  );
+
+  const samplesFor = useCallback(
+    (type: QuestionType) => (SAMPLES[type] ?? []).filter(matchesFilter),
+    [matchesFilter],
+  );
+
+  // Only show type cards that have at least one sample matching the filters.
+  const visibleTypes = useMemo(
+    () => CATALOG_TYPES.filter((type) => samplesFor(type).length > 0),
+    [samplesFor],
+  );
+
+  const samples = activeType ? samplesFor(activeType) : [];
   const currentQ = samples[exampleIndex % Math.max(samples.length, 1)];
+
+  const filtersActive = themeFilter !== "ALL" || diffFilter !== "ALL";
 
   const open = (type: QuestionType) => {
     setActiveType(type);
@@ -88,11 +123,24 @@ export default function TypesPage() {
     setResult(null);
   };
 
-  const cards = useMemo(() => CATALOG_TYPES, []);
+  // Changing a filter closes any open test (its variants may no longer match).
+  const pickDifficulty = (value: QuestionDifficulty | "ALL") => {
+    setDiffFilter(value);
+    setActiveType(null);
+  };
+  const pickTheme = (value: QuestionTheme | "ALL") => {
+    setThemeFilter(value);
+    setActiveType(null);
+  };
+  const resetFilters = () => {
+    setThemeFilter("ALL");
+    setDiffFilter("ALL");
+    setActiveType(null);
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-24 md:pb-12">
-      <div className="text-center mb-10 pt-4">
+      <div className="text-center mb-6 pt-4">
         <h2 className="font-display text-4xl font-bold text-slate-800 mb-4 flex items-center justify-center gap-3">
           <Library className="text-blue-500" size={40} />
           Catalogue des Quizz
@@ -102,37 +150,112 @@ export default function TypesPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
-        {cards.map((type) => {
-          const info = TYPE_INFO[type];
-          const Icon = info.icon;
-          const isActive = activeType === type;
-          return (
+      {/* Filter bar */}
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mx-4 flex flex-col lg:flex-row lg:items-center gap-4">
+        <div className="flex items-center gap-2 text-slate-600 font-bold shrink-0">
+          <SlidersHorizontal size={18} className="text-blue-500" />
+          Filtres
+        </div>
+
+        {/* Difficulty pills */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => pickDifficulty("ALL")}
+            className={`px-4 py-2 rounded-full border-2 text-sm font-bold transition-all ${
+              diffFilter === "ALL"
+                ? "bg-slate-800 border-slate-900 text-white"
+                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+            }`}
+          >
+            Toutes
+          </button>
+          {DIFFICULTY_FILTERS.map(({ value, activeCls }) => (
             <button
-              key={type}
-              onClick={() => open(type)}
-              className={`bg-white p-6 rounded-3xl border-4 text-left transition-all group relative overflow-hidden ${
-                isActive
-                  ? "border-blue-500 shadow-xl scale-105 ring-4 ring-blue-100 z-10"
-                  : "border-slate-100 hover:border-blue-300 hover:shadow-lg"
+              key={value}
+              onClick={() => pickDifficulty(value)}
+              className={`px-4 py-2 rounded-full border-2 text-sm font-bold transition-all ${
+                diffFilter === value ? activeCls : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
               }`}
             >
-              <div
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-colors ${
-                  isActive ? "bg-blue-500 text-white" : "bg-blue-50 text-blue-500 group-hover:bg-blue-100"
+              {value}
+            </button>
+          ))}
+        </div>
+
+        {/* Theme select */}
+        <div className="lg:ml-auto flex items-center gap-2">
+          <select
+            value={themeFilter}
+            onChange={(e) => pickTheme(e.target.value as QuestionTheme | "ALL")}
+            aria-label="Filtrer par thème"
+            className="px-4 py-2 rounded-full border-2 border-slate-200 text-sm font-bold text-slate-600 bg-white outline-none focus:border-primary transition-all cursor-pointer"
+          >
+            <option value="ALL">Tous les thèmes</option>
+            {ALL_THEMES.map((theme) => (
+              <option key={theme} value={theme}>
+                {theme}
+              </option>
+            ))}
+          </select>
+
+          {filtersActive && (
+            <button
+              onClick={resetFilters}
+              className="px-3 py-2 rounded-full text-sm font-bold text-slate-400 hover:text-slate-700 flex items-center gap-1 transition-colors"
+            >
+              <RotateCcw size={14} /> Réinitialiser
+            </button>
+          )}
+        </div>
+      </div>
+
+      {visibleTypes.length === 0 ? (
+        <div className="text-center py-16 text-slate-400">
+          <AlertTriangle className="mx-auto mb-3" size={32} />
+          <p className="font-bold">Aucun format ne correspond à ces filtres.</p>
+          <button onClick={resetFilters} className="mt-3 text-blue-600 font-bold underline">
+            Réinitialiser les filtres
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
+          {visibleTypes.map((type) => {
+            const info = TYPE_INFO[type];
+            const Icon = info.icon;
+            const isActive = activeType === type;
+            const count = samplesFor(type).length;
+            return (
+              <button
+                key={type}
+                onClick={() => open(type)}
+                className={`bg-white p-6 rounded-3xl border-4 text-left transition-all group relative overflow-hidden ${
+                  isActive
+                    ? "border-blue-500 shadow-xl scale-105 ring-4 ring-blue-100 z-10"
+                    : "border-slate-100 hover:border-blue-300 hover:shadow-lg"
                 }`}
               >
-                <Icon size={24} />
-              </div>
-              <h3 className="font-bold text-xl text-slate-800 mb-2">{info.label}</h3>
-              <p className="text-slate-500 text-sm leading-relaxed">{info.desc}</p>
-              <div className="mt-4 flex items-center text-blue-600 font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                Tester <Play size={14} className="ml-1" fill="currentColor" />
-              </div>
-            </button>
-          );
-        })}
-      </div>
+                {filtersActive && (
+                  <span className="absolute top-4 right-4 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold">
+                    {count} {count > 1 ? "exemples" : "exemple"}
+                  </span>
+                )}
+                <div
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-colors ${
+                    isActive ? "bg-blue-500 text-white" : "bg-blue-50 text-blue-500 group-hover:bg-blue-100"
+                  }`}
+                >
+                  <Icon size={24} />
+                </div>
+                <h3 className="font-bold text-xl text-slate-800 mb-2">{info.label}</h3>
+                <p className="text-slate-500 text-sm leading-relaxed">{info.desc}</p>
+                <div className="mt-4 flex items-center text-blue-600 font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                  Tester <Play size={14} className="ml-1" fill="currentColor" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {activeType && currentQ && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -169,9 +292,12 @@ export default function TypesPage() {
             </div>
 
             <div className="p-6 md:p-10 flex-1 overflow-y-auto">
-              <div className="flex items-center justify-center mb-2">
+              <div className="flex items-center justify-center gap-2 mb-2">
                 <span className="px-3 py-1 bg-slate-100 rounded-full text-xs font-bold text-slate-500 uppercase tracking-wide">
                   Thème : {currentQ.theme}
+                </span>
+                <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-bold uppercase tracking-wide">
+                  {currentQ.difficulty}
                 </span>
               </div>
               <h4 className="text-2xl font-bold text-slate-800 mb-8 text-center">

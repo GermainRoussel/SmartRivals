@@ -6,6 +6,7 @@ import {
 } from "@/types";
 import { DIFFERENCE_SCENES } from "./differences";
 import { PATTERN_PUZZLES } from "./patterns";
+import { HOTSPOT_SCENES } from "./hotspots";
 
 /**
  * Seeded question bank (Phase 1: in-code; Phase 2: mirrored into Supabase).
@@ -234,24 +235,32 @@ export const SAMPLES: Partial<Record<QuestionType, Question[]>> = {
     {
       id: "hotspot-1",
       type: QuestionType.HOTSPOT,
-      theme: QuestionTheme.GEO,
-      difficulty: QuestionDifficulty.MEDIUM,
-      text: "Où se trouve le Japon ?",
-      imageUrl:
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/World_map_-_low_resolution.svg/1000px-World_map_-_low_resolution.svg.png",
-      hotspotTarget: { x: 86, y: 35, tolerance: 5 },
-      correctAnswer: { x: 86, y: 35 },
+      theme: QuestionTheme.SCIENCE,
+      difficulty: QuestionDifficulty.EASY,
+      text: "Cliquez sur le nez du personnage.",
+      imageUrl: HOTSPOT_SCENES.face.image,
+      hotspotTarget: HOTSPOT_SCENES.face.target,
+      correctAnswer: { x: HOTSPOT_SCENES.face.target.x, y: HOTSPOT_SCENES.face.target.y },
     },
     {
       id: "hotspot-2",
       type: QuestionType.HOTSPOT,
       theme: QuestionTheme.SCIENCE,
-      difficulty: QuestionDifficulty.HARD,
-      text: "Cliquez sur le fémur.",
-      imageUrl:
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Human_skeleton_front_en.svg/640px-Human_skeleton_front_en.svg.png",
-      hotspotTarget: { x: 35, y: 55, tolerance: 10 },
-      correctAnswer: { x: 35, y: 55 },
+      difficulty: QuestionDifficulty.MEDIUM,
+      text: "Cliquez sur Saturne, la planète aux anneaux.",
+      imageUrl: HOTSPOT_SCENES.saturn.image,
+      hotspotTarget: HOTSPOT_SCENES.saturn.target,
+      correctAnswer: { x: HOTSPOT_SCENES.saturn.target.x, y: HOTSPOT_SCENES.saturn.target.y },
+    },
+    {
+      id: "hotspot-3",
+      type: QuestionType.HOTSPOT,
+      theme: QuestionTheme.LOGIC,
+      difficulty: QuestionDifficulty.EASY,
+      text: "Cliquez sur le chiffre 12 de l'horloge.",
+      imageUrl: HOTSPOT_SCENES.clock.image,
+      hotspotTarget: HOTSPOT_SCENES.clock.target,
+      correctAnswer: { x: HOTSPOT_SCENES.clock.target.x, y: HOTSPOT_SCENES.clock.target.y },
     },
   ],
   [QuestionType.HOLE_TEXT]: [

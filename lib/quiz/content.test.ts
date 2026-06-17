@@ -3,6 +3,7 @@ import { SAMPLES, pickFilteredQuestionIds, getQuestionsByIds } from "@/lib/quiz/
 import { isAnswerCorrect } from "@/lib/quiz/validation";
 import { DIFFERENCE_SCENES } from "@/lib/quiz/differences";
 import { PATTERN_PUZZLES } from "@/lib/quiz/patterns";
+import { HOTSPOT_SCENES } from "@/lib/quiz/hotspots";
 import { moveResult } from "@/lib/chess/board";
 import { Question, QuestionType, QuestionTheme, QuestionDifficulty } from "@/types";
 
@@ -55,6 +56,20 @@ describe("generated 'spot the difference' scenes", () => {
       expect(s.target.x).toBeGreaterThanOrEqual(0);
       expect(s.target.x).toBeLessThanOrEqual(100);
       expect(s.target.tolerance).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("generated hotspot scenes", () => {
+  it("produce a valid, self-contained SVG with an in-bounds target", () => {
+    for (const scene of Object.values(HOTSPOT_SCENES)) {
+      expect(decodeURIComponent(scene.image)).toContain("<svg");
+      expect(scene.image.startsWith("data:image/svg+xml")).toBe(true);
+      expect(scene.target.x).toBeGreaterThanOrEqual(0);
+      expect(scene.target.x).toBeLessThanOrEqual(100);
+      expect(scene.target.y).toBeGreaterThanOrEqual(0);
+      expect(scene.target.y).toBeLessThanOrEqual(100);
+      expect(scene.target.tolerance).toBeGreaterThan(0);
     }
   });
 });
