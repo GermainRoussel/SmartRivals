@@ -144,27 +144,8 @@ export default function MultiplayerPage() {
   }
 
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-[70vh] py-8">
-      {/* Settings gear — top right, opens shared theme/difficulty filters. */}
-      <button
-        onClick={() => setSettingsOpen(true)}
-        aria-label="Réglages de la partie"
-        className={`absolute top-0 right-0 md:right-2 p-3 rounded-2xl border-2 transition-all flex items-center gap-2 font-bold ${
-          filtersActive
-            ? "bg-blue-50 border-blue-300 text-blue-600"
-            : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700"
-        }`}
-      >
-        <Settings size={20} className={filtersActive ? "" : ""} />
-        {filtersActive && (
-          <span className="text-xs">
-            {(difficulty !== "ANY" ? 1 : 0) + themes.length} filtre
-            {(difficulty !== "ANY" ? 1 : 0) + themes.length > 1 ? "s" : ""}
-          </span>
-        )}
-      </button>
-
-      <div className="text-center mb-10">
+    <div className="flex flex-col items-center justify-center min-h-[70vh] py-8">
+      <div className="text-center mb-6">
         <div className="w-24 h-24 bg-red-100 rounded-[32px] flex items-center justify-center mx-auto mb-6 text-red-500 shadow-inner rotate-3">
           <Swords size={48} strokeWidth={2.5} />
         </div>
@@ -173,6 +154,25 @@ export default function MultiplayerPage() {
           Affrontez vos amis ou des joueurs du monde entier.
         </p>
       </div>
+
+      {/* Preferences — shared theme/difficulty filters for public + private play. */}
+      <button
+        onClick={() => setSettingsOpen(true)}
+        aria-label="Préférences de la partie"
+        className={`mb-10 px-5 py-2.5 rounded-2xl border-2 transition-all flex items-center gap-2 font-bold ${
+          filtersActive
+            ? "bg-blue-50 border-blue-300 text-blue-600"
+            : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700"
+        }`}
+      >
+        <Settings size={18} />
+        Préférences
+        {filtersActive && (
+          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+            {(difficulty !== "ANY" ? 1 : 0) + themes.length}
+          </span>
+        )}
+      </button>
 
       {error && (
         <div className="mb-6 bg-red-50 border border-red-200 text-red-600 font-bold px-5 py-3 rounded-2xl">
