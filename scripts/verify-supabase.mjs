@@ -1,8 +1,9 @@
-// Smoke-test the Phase 2 schema end-to-end with the service (admin) key.
-// Creates a temp user -> checks the signup trigger -> records an attempt ->
-// reads the leaderboard view -> deletes the temp user. Leaves the DB clean.
-const url = process.env.SUPABASE_URL;
-const key = process.env.SERVICE_KEY;
+// Smoke-test the schema end-to-end with the service (admin) key. Run with:
+//   node --env-file=.env.local scripts/verify-supabase.mjs
+// Creates a temp user -> signup trigger -> attempt + XP trigger -> leaderboard
+// -> avatars bucket -> deletes the temp user. Leaves the DB clean.
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const H = { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
 
 const log = (s, ok, extra = "") => console.log(`${ok ? "✅" : "❌"} ${s}${extra ? " — " + extra : ""}`);
@@ -37,6 +38,15 @@ const lb = await fetch(`${url}/rest/v1/weekly_leaderboard?select=username,total_
 const board = await lb.json();
 const row = Array.isArray(board) ? board.find((r) => r.username === "SmokeBot") : null;
 log("weekly_leaderboard view", !!row, JSON.stringify(row ?? board));
+
+// 4b. XP trigger awarded XP for the attempt (score 1234 -> +123).
+const px = await fetch(`${url}/rest/v1/profiles?id=eq.${user.id}&select=xp`, { headers: H });
+const xp = (await px.json())[0]?.xp;
+log("XP trigger awards quiz XP", xp === 123, `xp=${xp}`);
+
+// 4c. Avatars storage bucket exists.
+const bk = await fetch(`${url}/storage/v1/bucket/avatars`, { headers: H });
+log("avatars storage bucket exists", bk.ok);
 
 // 5. Cleanup — delete the temp user (cascades to profile + attempt).
 const del = await fetch(`${url}/auth/v1/admin/users/${user.id}`, { method: "DELETE", headers: H });

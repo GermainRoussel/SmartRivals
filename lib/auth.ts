@@ -5,6 +5,7 @@ export interface Profile {
   id: string;
   username: string;
   avatar_url: string | null;
+  bio: string | null;
   xp: number;
 }
 
@@ -29,7 +30,7 @@ export async function getProfile(): Promise<Profile | null> {
 
   const { data } = await supabase
     .from("profiles")
-    .select("id, username, avatar_url, xp")
+    .select("id, username, avatar_url, bio, xp")
     .eq("id", user.id)
     .single();
 

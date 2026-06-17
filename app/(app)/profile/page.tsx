@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { LogIn, Swords } from "lucide-react";
+import { LogIn, Swords, Pencil } from "lucide-react";
 import { getProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getRank } from "@/lib/rank";
 import { Button } from "@/components/ui/Button";
 
 function avatarFor(username: string, url: string | null) {
@@ -62,6 +63,7 @@ export default async function ProfilePage() {
   const accuracy = totalQuestions ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
   const bestStreak = attempts?.reduce((m, a) => Math.max(m, a.max_streak), 0) ?? 0;
   const recentMatches = (matches ?? []) as MatchRow[];
+  const rank = getRank(profile.xp);
 
   return (
     <div className="max-w-3xl mx-auto mt-4 space-y-6">
@@ -72,9 +74,38 @@ export default async function ProfilePage() {
           className="w-32 h-32 rounded-full bg-slate-100 mb-4 border-4 border-white shadow-lg"
         />
         <h2 className="text-3xl font-display font-bold text-slate-800">{profile.username}</h2>
+
         <span className="px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-bold mt-2 shadow-sm">
-          {profile.xp} XP
+          Niveau {rank.level} · {rank.name}
         </span>
+        <div className="w-full max-w-xs mt-3">
+          <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all duration-500"
+              style={{ width: `${rank.progress}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-xs text-slate-400 font-bold mt-1">
+            <span>{profile.xp} XP</span>
+            {rank.next ? (
+              <span>
+                {rank.xpForLevel - rank.xpIntoLevel} XP → {rank.next}
+              </span>
+            ) : (
+              <span>Niveau max 🏆</span>
+            )}
+          </div>
+        </div>
+
+        {profile.bio && (
+          <p className="text-slate-500 text-center max-w-md mt-3">{profile.bio}</p>
+        )}
+
+        <Link href="/profile/edit" className="mt-4">
+          <Button variant="outline" size="sm">
+            <Pencil size={14} className="mr-1" /> Éditer le profil
+          </Button>
+        </Link>
 
         <div className="mt-8 w-full grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <Stat value={games} label="Quizz joués" />
