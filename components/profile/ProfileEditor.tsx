@@ -14,7 +14,13 @@ function dicebear(style: string, seed: string) {
   return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed || "SmartRivals")}`;
 }
 
-export function ProfileEditor({ profile }: { profile: Profile }) {
+export function ProfileEditor({
+  profile,
+  welcome = false,
+}: {
+  profile: Profile;
+  welcome?: boolean;
+}) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
 

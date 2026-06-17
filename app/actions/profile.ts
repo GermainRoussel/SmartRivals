@@ -27,6 +27,7 @@ export async function updateProfile(
       username,
       bio: input.bio?.trim().slice(0, 200) || null,
       avatar_url: input.avatar_url || null,
+      onboarded: true,
     })
     .eq("id", user.id);
 

@@ -14,7 +14,20 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      // Brand-new accounts land on profile setup first.
+      let dest = next;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("onboarded")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (prof && !prof.onboarded) dest = "/profile/edit?welcome=1";
+      }
+      return NextResponse.redirect(`${origin}${dest}`);
     }
   }
 
