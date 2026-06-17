@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Swords, Users, KeyRound, Play, Loader2, X, SlidersHorizontal } from "lucide-react";
+import { Swords, Users, KeyRound, Play, Loader2, X, SlidersHorizontal, Settings } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
-import { pickQuestionIds, pickFilteredQuestionIds } from "@/lib/quiz/bank";
+import { pickFilteredQuestionIds } from "@/lib/quiz/bank";
 import { QuestionTheme, QuestionDifficulty } from "@/types";
 import {
   createPrivateRoom,
@@ -37,15 +37,25 @@ export default function MultiplayerPage() {
   const [error, setError] = useState<string | null>(null);
   const [themes, setThemes] = useState<QuestionTheme[]>([]);
   const [difficulty, setDifficulty] = useState<Difficulty>("ANY");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const filtersActive = themes.length > 0 || difficulty !== "ANY";
 
   const toggleTheme = (t: QuestionTheme) =>
     setThemes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+
+  // Shared filter → question-ids helper, honoured by both public and private play.
+  const pickIds = () =>
+    pickFilteredQuestionIds(newQuestionSeed(), MP_QUESTION_COUNT, {
+      themes: themes.length ? themes : undefined,
+      difficulty: difficulty === "ANY" ? undefined : difficulty,
+    });
 
   const startPublic = async () => {
     setError(null);
     setMode("searching");
     try {
-      const ids = pickQuestionIds(newQuestionSeed(), MP_QUESTION_COUNT);
+      const ids = pickIds();
       const roomId = await findMatch(ids);
       if (roomId) {
         router.push(`/multiplayer/${roomId}`);
@@ -86,10 +96,7 @@ export default function MultiplayerPage() {
     setBusy(true);
     setError(null);
     try {
-      const ids = pickFilteredQuestionIds(newQuestionSeed(), MP_QUESTION_COUNT, {
-        themes: themes.length ? themes : undefined,
-        difficulty: difficulty === "ANY" ? undefined : difficulty,
-      });
+      const ids = pickIds();
       const room = await createPrivateRoom(ids, { themes, difficulty });
       router.push(`/multiplayer/${room.id}`);
     } catch (e) {
@@ -121,6 +128,13 @@ export default function MultiplayerPage() {
           </div>
           <h3 className="text-xl font-bold text-slate-800 mb-2">Recherche d&apos;un adversaire…</h3>
           <p className="text-slate-500 mb-6 text-center">On vous met en relation dès qu&apos;un joueur est dispo.</p>
+          {filtersActive && (
+            <p className="text-xs font-bold text-blue-500 mb-4 text-center">
+              Filtres actifs : {difficulty === "ANY" ? "" : `${difficulty}`}
+              {difficulty !== "ANY" && themes.length ? " · " : ""}
+              {themes.length ? `${themes.length} thème${themes.length > 1 ? "s" : ""}` : ""}
+            </p>
+          )}
           <Button variant="ghost" onClick={cancelSearch}>
             Annuler
           </Button>
@@ -130,7 +144,26 @@ export default function MultiplayerPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] py-8">
+    <div className="relative flex flex-col items-center justify-center min-h-[70vh] py-8">
+      {/* Settings gear — top right, opens shared theme/difficulty filters. */}
+      <button
+        onClick={() => setSettingsOpen(true)}
+        aria-label="Réglages de la partie"
+        className={`absolute top-0 right-0 md:right-2 p-3 rounded-2xl border-2 transition-all flex items-center gap-2 font-bold ${
+          filtersActive
+            ? "bg-blue-50 border-blue-300 text-blue-600"
+            : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700"
+        }`}
+      >
+        <Settings size={20} className={filtersActive ? "" : ""} />
+        {filtersActive && (
+          <span className="text-xs">
+            {(difficulty !== "ANY" ? 1 : 0) + themes.length} filtre
+            {(difficulty !== "ANY" ? 1 : 0) + themes.length > 1 ? "s" : ""}
+          </span>
+        )}
+      </button>
+
       <div className="text-center mb-10">
         <div className="w-24 h-24 bg-red-100 rounded-[32px] flex items-center justify-center mx-auto mb-6 text-red-500 shadow-inner rotate-3">
           <Swords size={48} strokeWidth={2.5} />
@@ -214,62 +247,15 @@ export default function MultiplayerPage() {
             Paramètres de la salle
           </h3>
 
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-bold uppercase tracking-wider text-slate-500">
-                Thèmes (tous par défaut)
-              </span>
-              {themes.length > 0 && (
-                <button
-                  onClick={() => setThemes([])}
-                  className="text-xs font-bold text-blue-500 hover:text-blue-700"
-                >
-                  Réinitialiser
-                </button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {Object.values(QuestionTheme).map((t) => {
-                const on = themes.includes(t);
-                return (
-                  <button
-                    key={t}
-                    onClick={() => toggleTheme(t)}
-                    className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
-                      on
-                        ? "bg-blue-100 border-blue-400 text-blue-700"
-                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <FilterControls
+            themes={themes}
+            difficulty={difficulty}
+            toggleTheme={toggleTheme}
+            resetThemes={() => setThemes([])}
+            setDifficulty={setDifficulty}
+          />
 
-          <div className="mb-8">
-            <span className="text-sm font-bold uppercase tracking-wider text-slate-500 block mb-3">
-              Difficulté
-            </span>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-              {DIFFICULTIES.map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setDifficulty(d)}
-                  className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${
-                    difficulty === d
-                      ? "bg-slate-800 border-slate-800 text-white"
-                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {d === "ANY" ? "Mixte" : d}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-3">
+          <div className="flex gap-3 mt-8">
             <Button variant="ghost" onClick={() => setMode("private")} disabled={busy}>
               Retour
             </Button>
@@ -279,6 +265,114 @@ export default function MultiplayerPage() {
           </div>
         </div>
       )}
+
+      {/* Settings modal — shared filters for public + private play. */}
+      {settingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={() => setSettingsOpen(false)} />
+          <div className="relative z-10 bg-white rounded-[32px] shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+            <div className="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div className="flex items-center gap-3">
+                <Settings size={24} className="text-blue-500" />
+                <div>
+                  <h3 className="text-2xl font-display font-bold text-slate-800">Réglages de la partie</h3>
+                  <p className="text-sm text-slate-500">Appliqués à la partie publique et aux salles que vous créez.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSettingsOpen(false)}
+                aria-label="Fermer"
+                className="p-3 hover:bg-slate-200 rounded-full transition-colors text-slate-400 hover:text-slate-700"
+              >
+                <X size={26} />
+              </button>
+            </div>
+
+            <div className="p-6 md:p-8">
+              <FilterControls
+                themes={themes}
+                difficulty={difficulty}
+                toggleTheme={toggleTheme}
+                resetThemes={() => setThemes([])}
+                setDifficulty={setDifficulty}
+              />
+              <Button fullWidth size="lg" className="mt-8" onClick={() => setSettingsOpen(false)}>
+                Terminé
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Shared theme + difficulty controls (gear modal AND private setup)  */
+/* ------------------------------------------------------------------ */
+
+interface FilterControlsProps {
+  themes: QuestionTheme[];
+  difficulty: Difficulty;
+  toggleTheme: (t: QuestionTheme) => void;
+  resetThemes: () => void;
+  setDifficulty: (d: Difficulty) => void;
+}
+
+function FilterControls({ themes, difficulty, toggleTheme, resetThemes, setDifficulty }: FilterControlsProps) {
+  return (
+    <>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-bold uppercase tracking-wider text-slate-500">
+            Thèmes (tous par défaut)
+          </span>
+          {themes.length > 0 && (
+            <button onClick={resetThemes} className="text-xs font-bold text-blue-500 hover:text-blue-700">
+              Réinitialiser
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {Object.values(QuestionTheme).map((t) => {
+            const on = themes.includes(t);
+            return (
+              <button
+                key={t}
+                onClick={() => toggleTheme(t)}
+                className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                  on
+                    ? "bg-blue-100 border-blue-400 text-blue-700"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <span className="text-sm font-bold uppercase tracking-wider text-slate-500 block mb-3">
+          Difficulté
+        </span>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          {DIFFICULTIES.map((d) => (
+            <button
+              key={d}
+              onClick={() => setDifficulty(d)}
+              className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${
+                difficulty === d
+                  ? "bg-slate-800 border-slate-800 text-white"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {d === "ANY" ? "Mixte" : d}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
