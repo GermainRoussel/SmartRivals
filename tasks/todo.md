@@ -145,6 +145,10 @@ Deep line-by-line review of the 21 question types vs validation + bank.
   player, or delete the empty room). The room page calls it when it detects the
   host is gone, so the new host resumes driving progression. Verified end-to-end
   in `scripts/verify-multiplayer.mjs`.
-  - Still pending (multiplayer): in-game theme/difficulty selection, result history.
-    Known limit: handoff fires on explicit "Quitter" (row delete); tab-close needs
+  - Known limit: handoff fires on explicit "Quitter" (row delete); tab-close needs
     Realtime Presence cleanup (future).
+- **P4 — multiplayer theme/difficulty** ✅ Private-room create flow now has a setup
+  step (theme chips + difficulty). `pickFilteredQuestionIds` draws the room's
+  questions from the filter (deterministic, falls back if too narrow); settings
+  stored on the room. Covered by tests.
+  - Still pending (multiplayer): result history.

@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Swords, Users, KeyRound, Play, Loader2, X } from "lucide-react";
+import { Swords, Users, KeyRound, Play, Loader2, X, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
-import { pickQuestionIds } from "@/lib/quiz/bank";
+import { pickQuestionIds, pickFilteredQuestionIds } from "@/lib/quiz/bank";
+import { QuestionTheme, QuestionDifficulty } from "@/types";
 import {
   createPrivateRoom,
   joinByCode,
@@ -14,7 +15,15 @@ import {
   MP_QUESTION_COUNT,
 } from "@/lib/multiplayer";
 
-type Mode = "menu" | "private" | "searching";
+type Mode = "menu" | "private" | "setup" | "searching";
+type Difficulty = QuestionDifficulty | "ANY";
+const DIFFICULTIES: Difficulty[] = [
+  "ANY",
+  QuestionDifficulty.EASY,
+  QuestionDifficulty.MEDIUM,
+  QuestionDifficulty.HARD,
+  QuestionDifficulty.EXPERT,
+];
 
 function newQuestionSeed() {
   return `mp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -26,6 +35,11 @@ export default function MultiplayerPage() {
   const [joinCode, setJoinCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [themes, setThemes] = useState<QuestionTheme[]>([]);
+  const [difficulty, setDifficulty] = useState<Difficulty>("ANY");
+
+  const toggleTheme = (t: QuestionTheme) =>
+    setThemes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
   const startPublic = async () => {
     setError(null);
@@ -72,8 +86,11 @@ export default function MultiplayerPage() {
     setBusy(true);
     setError(null);
     try {
-      const ids = pickQuestionIds(newQuestionSeed(), MP_QUESTION_COUNT);
-      const room = await createPrivateRoom(ids);
+      const ids = pickFilteredQuestionIds(newQuestionSeed(), MP_QUESTION_COUNT, {
+        themes: themes.length ? themes : undefined,
+        difficulty: difficulty === "ANY" ? undefined : difficulty,
+      });
+      const room = await createPrivateRoom(ids, { themes, difficulty });
       router.push(`/multiplayer/${room.id}`);
     } catch (e) {
       setError((e as Error).message);
@@ -160,8 +177,8 @@ export default function MultiplayerPage() {
 
       {mode === "private" && (
         <div className="bg-white p-8 rounded-[32px] shadow-xl border border-slate-100 max-w-md w-full">
-          <Button fullWidth size="lg" className="mb-4" onClick={createRoom} disabled={busy}>
-            {busy ? <Loader2 className="animate-spin" /> : "Créer une salle"}
+          <Button fullWidth size="lg" className="mb-4" onClick={() => setMode("setup")}>
+            <SlidersHorizontal size={18} className="mr-2" /> Créer une salle
           </Button>
           <div className="relative flex py-4 items-center">
             <div className="flex-grow border-t border-slate-200" />
@@ -188,6 +205,78 @@ export default function MultiplayerPage() {
           <Button variant="ghost" fullWidth className="mt-6" onClick={() => setMode("menu")}>
             <X size={18} className="mr-1" /> Retour
           </Button>
+        </div>
+      )}
+
+      {mode === "setup" && (
+        <div className="bg-white p-8 rounded-[32px] shadow-xl border border-slate-100 max-w-2xl w-full">
+          <h3 className="text-2xl font-display font-bold text-slate-800 mb-6 text-center">
+            Paramètres de la salle
+          </h3>
+
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                Thèmes (tous par défaut)
+              </span>
+              {themes.length > 0 && (
+                <button
+                  onClick={() => setThemes([])}
+                  className="text-xs font-bold text-blue-500 hover:text-blue-700"
+                >
+                  Réinitialiser
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {Object.values(QuestionTheme).map((t) => {
+                const on = themes.includes(t);
+                return (
+                  <button
+                    key={t}
+                    onClick={() => toggleTheme(t)}
+                    className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                      on
+                        ? "bg-blue-100 border-blue-400 text-blue-700"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <span className="text-sm font-bold uppercase tracking-wider text-slate-500 block mb-3">
+              Difficulté
+            </span>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              {DIFFICULTIES.map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDifficulty(d)}
+                  className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${
+                    difficulty === d
+                      ? "bg-slate-800 border-slate-800 text-white"
+                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {d === "ANY" ? "Mixte" : d}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="ghost" onClick={() => setMode("private")} disabled={busy}>
+              Retour
+            </Button>
+            <Button fullWidth size="lg" onClick={createRoom} disabled={busy}>
+              {busy ? <Loader2 className="animate-spin" /> : "Lancer la salle"}
+            </Button>
+          </div>
         </div>
       )}
     </div>

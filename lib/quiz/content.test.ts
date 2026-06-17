@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { SAMPLES } from "@/lib/quiz/bank";
+import { SAMPLES, pickFilteredQuestionIds, getQuestionsByIds } from "@/lib/quiz/bank";
 import { isAnswerCorrect } from "@/lib/quiz/validation";
 import { DIFFERENCE_SCENES } from "@/lib/quiz/differences";
 import { PATTERN_PUZZLES } from "@/lib/quiz/patterns";
 import { moveResult } from "@/lib/chess/board";
-import { Question, QuestionType } from "@/types";
+import { Question, QuestionType, QuestionTheme, QuestionDifficulty } from "@/types";
 
 // Types whose stored `correctAnswer` IS exactly what validation receives,
 // so the canonical answer must validate. (Excludes MATCHING/SORTING/HOLE_TEXT,
@@ -77,5 +77,30 @@ describe("chess puzzles", () => {
       expect(r, `${cq.id}: ${cq.correctAnswer} should be legal`).not.toBeNull();
       expect(r?.isCheckmate, `${cq.id}: ${cq.correctAnswer} should be mate`).toBe(true);
     }
+  });
+});
+
+describe("pickFilteredQuestionIds", () => {
+  it("only returns questions of the requested theme", () => {
+    const qs = getQuestionsByIds(pickFilteredQuestionIds("s1", 20, { themes: [QuestionTheme.GEO] }));
+    expect(qs.length).toBeGreaterThan(0);
+    expect(qs.every((q) => q.theme === QuestionTheme.GEO)).toBe(true);
+  });
+
+  it("only returns questions of the requested difficulty", () => {
+    const qs = getQuestionsByIds(
+      pickFilteredQuestionIds("s2", 20, { difficulty: QuestionDifficulty.EASY }),
+    );
+    expect(qs.length).toBeGreaterThan(0);
+    expect(qs.every((q) => q.difficulty === QuestionDifficulty.EASY)).toBe(true);
+  });
+
+  it("is deterministic for a given seed", () => {
+    expect(pickFilteredQuestionIds("same", 5)).toEqual(pickFilteredQuestionIds("same", 5));
+  });
+
+  it("falls back to a non-empty set when the filter matches nothing", () => {
+    const ids = pickFilteredQuestionIds("s3", 5, { themes: [QuestionTheme.CARS] });
+    expect(ids.length).toBeGreaterThan(0);
   });
 });

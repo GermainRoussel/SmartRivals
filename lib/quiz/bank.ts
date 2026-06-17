@@ -987,3 +987,33 @@ export function pickQuestionIds(seed: string, count = 10): string[] {
 export function getDailyQuestions(dateKey: string, count = 10): Question[] {
   return getQuestionsByIds(pickQuestionIds(dateKey, count));
 }
+
+export interface QuestionFilter {
+  themes?: QuestionTheme[];
+  difficulty?: QuestionDifficulty;
+}
+
+/**
+ * Pick up to `count` question ids matching a theme/difficulty filter
+ * (deterministic by `seed`). Falls back to the full bank if the filter is empty
+ * or too narrow, so a room never ends up with zero questions.
+ */
+export function pickFilteredQuestionIds(
+  seed: string,
+  count: number,
+  filter?: QuestionFilter,
+): string[] {
+  let pool = ALL_QUESTIONS;
+  if (filter?.themes?.length) {
+    pool = pool.filter((qn) => filter.themes!.includes(qn.theme));
+  }
+  if (filter?.difficulty) {
+    pool = pool.filter((qn) => qn.difficulty === filter.difficulty);
+  }
+  if (pool.length === 0) pool = ALL_QUESTIONS;
+
+  const rng = mulberry32(hashString(seed));
+  return seededShuffle(pool, rng)
+    .slice(0, count)
+    .map((qn) => qn.id);
+}

@@ -40,12 +40,15 @@ async function uid(): Promise<string> {
   return user.id;
 }
 
-export async function createPrivateRoom(questionIds: string[]): Promise<Room> {
+export async function createPrivateRoom(
+  questionIds: string[],
+  settings: Record<string, unknown> = {},
+): Promise<Room> {
   const supabase = createClient();
   const me = await uid();
   const { data: room, error } = await supabase
     .from("rooms")
-    .insert({ host_id: me, is_public: false, question_ids: questionIds })
+    .insert({ host_id: me, is_public: false, question_ids: questionIds, settings })
     .select()
     .single();
   if (error || !room) throw error ?? new Error("room creation failed");
