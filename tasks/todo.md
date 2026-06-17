@@ -159,3 +159,21 @@ Deep line-by-line review of the 21 question types vs validation + bank.
 
 All three multiplayer enhancements done. Remaining nice-to-have: tab-close
 handling via Realtime Presence.
+
+## Profile depth
+
+`0005_profile.sql`: bio column, server-side XP triggers (quiz score-based; multi
+participation + win), public `avatars` storage bucket (owner-write by folder).
+
+- **Editable profile** (`/profile/edit`): username, bio, avatar = DiceBear style
+  picker + random seed + photo upload to Storage. `updateProfile` server action.
+- **XP & levels** (`lib/rank.ts`): XP → named rank + progress bar (now that XP is
+  actually awarded). Tested.
+- **Achievements** (`lib/achievements.ts`): derived badges + UTC-safe daily streak,
+  shown on the profile. Tested.
+- **Public profiles** (`/u/[id]`): identity + rank + quiz stats (quiz_attempts are
+  world-readable; match history stays private); linked from the leaderboard.
+
+Verified: XP trigger + avatars bucket via `scripts/verify-supabase.mjs`. 56 tests.
+Nice-to-have next: unique usernames, achievement unlock timestamps/toasts,
+mp stats on public profiles (would need match_results read policy change).
