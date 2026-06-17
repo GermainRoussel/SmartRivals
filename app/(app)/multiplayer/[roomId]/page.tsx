@@ -13,6 +13,7 @@ import {
   startGame,
   setScore,
   advanceQuestion,
+  promoteHost,
   MP_QUESTION_MS,
   type RoomPlayer,
 } from "@/lib/multiplayer";
@@ -36,6 +37,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
   const scoreRef = useRef(0);
   const streakRef = useRef(0);
   const answeredRef = useRef(-1);
+  const promotingRef = useRef(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -67,6 +69,18 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     );
     return () => clearTimeout(t);
   }, [room, isHost, roomId]);
+
+  // If the host has left, promote the next player so the game can resume.
+  useEffect(() => {
+    if (!room || players.length === 0) return;
+    const hostPresent = players.some((p) => p.user_id === room.host_id);
+    if (!hostPresent && !promotingRef.current) {
+      promotingRef.current = true;
+      void promoteHost(roomId).finally(() => {
+        promotingRef.current = false;
+      });
+    }
+  }, [room, players, roomId]);
 
   const handleAnswer = useCallback(
     (isCorrect: boolean) => {

@@ -140,5 +140,11 @@ Deep line-by-line review of the 21 question types vs validation + bank.
   MCQ, T/F, Input, Slider, Anagram, Word-guess, Math, Order, Odd-one-out, Matching,
   Sorting, Hole-text, Connections, Blind-test, Image-MCQ, + 2 verified chess mates.
   New chess integrity test asserts every puzzle's solution is a real mate.
-  - Still pending (multiplayer): host-leave handling, in-game theme/difficulty
-    selection, result history.
+- **P4 — multiplayer host-leave** ✅ `0003_host_handoff.sql` adds a SECURITY DEFINER
+  `promote_host` RPC (no-op while host present; else promote earliest-joined
+  player, or delete the empty room). The room page calls it when it detects the
+  host is gone, so the new host resumes driving progression. Verified end-to-end
+  in `scripts/verify-multiplayer.mjs`.
+  - Still pending (multiplayer): in-game theme/difficulty selection, result history.
+    Known limit: handoff fires on explicit "Quitter" (row delete); tab-close needs
+    Realtime Presence cleanup (future).

@@ -90,6 +90,16 @@ try {
   const { data: r2 } = await B.client.rpc("find_or_create_match", { p_question_ids: ["mcq-1"] });
   const { data: mmPlayers } = await admin.from("room_players").select("user_id").eq("room_id", r2 ?? "");
   log("matchmaking RPC pairs two players", r1 === null && !!r2 && (mmPlayers?.length === 2), `queued=${r1}, matched=${!!r2}, players=${mmPlayers?.length}`);
+
+  // 7. Host handoff: A hosts, both join, A leaves -> B promotes itself to host.
+  const { data: hRoom } = await A.client
+    .from("rooms").insert({ host_id: A.id, is_public: false, question_ids: ["mcq-1"] }).select().single();
+  await A.client.from("room_players").insert({ room_id: hRoom.id, user_id: A.id });
+  await B.client.from("room_players").insert({ room_id: hRoom.id, user_id: B.id });
+  await A.client.from("room_players").delete().eq("room_id", hRoom.id).eq("user_id", A.id); // host leaves
+  const { data: newHost } = await B.client.rpc("promote_host", { p_room: hRoom.id });
+  const { data: after } = await admin.from("rooms").select("host_id").eq("id", hRoom.id).maybeSingle();
+  log("host handoff promotes the remaining player", newHost === B.id && after?.host_id === B.id, `newHost=${newHost === B.id}`);
 } catch (e) {
   ok = false;
   console.error("ERROR:", e.message);

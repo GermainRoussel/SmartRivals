@@ -133,3 +133,13 @@ export async function leaveQueue(): Promise<void> {
   const me = await uid();
   await supabase.from("matchmaking_queue").delete().eq("user_id", me);
 }
+
+/**
+ * Promote the next player to host if the current host has left (idempotent:
+ * no-op while the host is still present). Lets the game resume after a host
+ * leaves, since the host drives question progression.
+ */
+export async function promoteHost(roomId: string): Promise<void> {
+  const supabase = createClient();
+  await supabase.rpc("promote_host", { p_room: roomId });
+}
