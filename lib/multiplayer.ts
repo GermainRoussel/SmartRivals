@@ -146,3 +146,25 @@ export async function promoteHost(roomId: string): Promise<void> {
   const supabase = createClient();
   await supabase.rpc("promote_host", { p_room: roomId });
 }
+
+export interface MatchResult {
+  roomId: string;
+  score: number;
+  rank: number;
+  totalPlayers: number;
+  won: boolean;
+}
+
+/** Record the signed-in player's result for a finished match (once per game). */
+export async function recordMatchResult(r: MatchResult): Promise<void> {
+  const supabase = createClient();
+  const me = await uid();
+  await supabase.from("match_results").insert({
+    user_id: me,
+    room_id: r.roomId,
+    score: r.score,
+    rank: r.rank,
+    total_players: r.totalPlayers,
+    won: r.won,
+  });
+}

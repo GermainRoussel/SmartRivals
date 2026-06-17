@@ -14,6 +14,7 @@ import {
   setScore,
   advanceQuestion,
   promoteHost,
+  recordMatchResult,
   MP_QUESTION_MS,
   type RoomPlayer,
 } from "@/lib/multiplayer";
@@ -38,6 +39,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
   const streakRef = useRef(0);
   const answeredRef = useRef(-1);
   const promotingRef = useRef(false);
+  const recordedRef = useRef(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -81,6 +83,22 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
       });
     }
   }, [room, players, roomId]);
+
+  // Record this player's result once, when the match ends.
+  useEffect(() => {
+    if (room?.status !== "finished" || !me || recordedRef.current || players.length === 0) return;
+    recordedRef.current = true;
+    const sorted = [...players].sort((a, b) => b.score - a.score);
+    const myRank = sorted.findIndex((p) => p.user_id === me) + 1;
+    const myScore = sorted.find((p) => p.user_id === me)?.score ?? 0;
+    void recordMatchResult({
+      roomId,
+      score: myScore,
+      rank: myRank,
+      totalPlayers: players.length,
+      won: myRank === 1,
+    });
+  }, [room?.status, me, players, roomId]);
 
   const handleAnswer = useCallback(
     (isCorrect: boolean) => {

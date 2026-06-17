@@ -100,6 +100,12 @@ try {
   const { data: newHost } = await B.client.rpc("promote_host", { p_room: hRoom.id });
   const { data: after } = await admin.from("rooms").select("host_id").eq("id", hRoom.id).maybeSingle();
   log("host handoff promotes the remaining player", newHost === B.id && after?.host_id === B.id, `newHost=${newHost === B.id}`);
+
+  // 8. Match history: B records a result; B sees it, A cannot (RLS own-only).
+  await B.client.from("match_results").insert({ user_id: B.id, room_id: hRoom.id, score: 500, rank: 1, total_players: 2, won: true });
+  const { data: bRows } = await B.client.from("match_results").select("score").eq("user_id", B.id);
+  const { data: aSeesB } = await A.client.from("match_results").select("score").eq("user_id", B.id);
+  log("match history: own visible, others hidden by RLS", (bRows?.length ?? 0) >= 1 && (aSeesB?.length ?? 0) === 0, `b=${bRows?.length}, aSeesB=${aSeesB?.length}`);
 } catch (e) {
   ok = false;
   console.error("ERROR:", e.message);

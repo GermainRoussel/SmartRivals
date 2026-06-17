@@ -151,4 +151,11 @@ Deep line-by-line review of the 21 question types vs validation + bank.
   step (theme chips + difficulty). `pickFilteredQuestionIds` draws the room's
   questions from the filter (deterministic, falls back if too narrow); settings
   stored on the room. Covered by tests.
-  - Still pending (multiplayer): result history.
+- **P4 — multiplayer result history** ✅ `0004_match_history.sql` adds a
+  `match_results` table (one row per player per finished game; `room_id` set-null
+  on room delete so history survives) with own-only RLS. The room page records the
+  player's result once on finish; the Profile shows recent matches + a multiplayer
+  wins stat. Verified (insert + RLS isolation) in `scripts/verify-multiplayer.mjs`.
+
+All three multiplayer enhancements done. Remaining nice-to-have: tab-close
+handling via Realtime Presence.
