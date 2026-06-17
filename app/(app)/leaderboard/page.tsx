@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Trophy, Medal } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -84,7 +85,11 @@ export default async function LeaderboardPage() {
         ) : (
           <div className="divide-y divide-slate-50">
             {rows.map((leader, i) => (
-              <div key={leader.id} className="flex items-center p-4 hover:bg-slate-50 transition-colors">
+              <Link
+                key={leader.id}
+                href={`/u/${leader.id}`}
+                className="flex items-center p-4 hover:bg-slate-50 transition-colors"
+              >
                 <div className="w-8 text-center font-bold text-slate-400 mr-4">
                   {i === 0 ? (
                     <Trophy className="text-yellow-500 mx-auto" size={24} />
@@ -106,7 +111,7 @@ export default async function LeaderboardPage() {
                   <div className="text-xs text-slate-500">{leader.games_played} parties</div>
                 </div>
                 <div className="font-display font-bold text-primary">{leader.total_score} pts</div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

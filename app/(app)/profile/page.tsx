@@ -3,6 +3,7 @@ import { LogIn, Swords, Pencil } from "lucide-react";
 import { getProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getRank } from "@/lib/rank";
+import { evaluateAchievements, computeDailyStreak, type PlayerStats } from "@/lib/achievements";
 import { Button } from "@/components/ui/Button";
 
 function avatarFor(username: string, url: string | null) {
@@ -41,7 +42,7 @@ export default async function ProfilePage() {
 
   const { data: attempts } = await supabase
     .from("quiz_attempts")
-    .select("score, correct_count, total, max_streak")
+    .select("score, correct_count, total, max_streak, quiz_date")
     .eq("user_id", profile.id);
 
   const { data: matches } = await supabase
@@ -57,6 +58,11 @@ export default async function ProfilePage() {
     .eq("user_id", profile.id)
     .eq("won", true);
 
+  const { count: mpGames } = await supabase
+    .from("match_results")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", profile.id);
+
   const games = attempts?.length ?? 0;
   const totalCorrect = attempts?.reduce((s, a) => s + a.correct_count, 0) ?? 0;
   const totalQuestions = attempts?.reduce((s, a) => s + a.total, 0) ?? 0;
@@ -64,6 +70,19 @@ export default async function ProfilePage() {
   const bestStreak = attempts?.reduce((m, a) => Math.max(m, a.max_streak), 0) ?? 0;
   const recentMatches = (matches ?? []) as MatchRow[];
   const rank = getRank(profile.xp);
+
+  const dailyStreak = computeDailyStreak((attempts ?? []).map((a) => a.quiz_date as string));
+  const stats: PlayerStats = {
+    quizGames: games,
+    perfectQuiz: attempts?.some((a) => a.correct_count === a.total) ?? false,
+    bestQuizStreak: bestStreak,
+    mpGames: mpGames ?? 0,
+    mpWins: mpWins ?? 0,
+    dailyStreak,
+    xp: profile.xp,
+  };
+  const achievements = evaluateAchievements(stats);
+  const unlockedCount = achievements.filter((a) => a.unlocked).length;
 
   return (
     <div className="max-w-3xl mx-auto mt-4 space-y-6">
@@ -112,6 +131,38 @@ export default async function ProfilePage() {
           <Stat value={`${accuracy}%`} label="Précision" />
           <Stat value={`🔥 ${bestStreak}`} label="Série max" />
           <Stat value={`🏆 ${mpWins ?? 0}`} label="Victoires multi" />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-display font-bold text-lg text-slate-800">
+            Succès ({unlockedCount}/{achievements.length})
+          </h3>
+          {dailyStreak > 0 && (
+            <span className="text-sm font-bold text-orange-500">
+              🔥 {dailyStreak} jour{dailyStreak > 1 ? "s" : ""} d&apos;affilée
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {achievements.map((a) => (
+            <div
+              key={a.id}
+              title={a.desc}
+              className={`p-3 rounded-2xl border text-center transition-all ${
+                a.unlocked
+                  ? "bg-yellow-50 border-yellow-200"
+                  : "bg-slate-50 border-slate-100 opacity-60"
+              }`}
+            >
+              <div className={`text-3xl mb-1 ${a.unlocked ? "" : "grayscale opacity-50"}`}>
+                {a.emoji}
+              </div>
+              <div className="font-bold text-sm text-slate-700">{a.name}</div>
+              <div className="text-xs text-slate-400 leading-tight mt-0.5">{a.desc}</div>
+            </div>
+          ))}
         </div>
       </div>
 
