@@ -2,7 +2,16 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getUserId } from "@/lib/auth";
-import { evaluateAchievements, computeDailyStreak, type PlayerStats } from "@/lib/achievements";
+import {
+  evaluateAchievements,
+  computeDailyStreak,
+  computeMpConsecWins,
+  type PlayerStats,
+} from "@/lib/achievements";
+import { maxPointsPerQuestion } from "@/lib/scoring";
+
+const MAX_TIME = 15;
+const MAX_PER_Q = maxPointsPerQuestion(MAX_TIME);
 
 export interface NewAchievement {
   id: string;
@@ -21,53 +30,56 @@ export async function syncAchievements(): Promise<NewAchievement[]> {
 
   const supabase = await createClient();
 
-  // Gather stats — same shape as profile/page.tsx.
-  const [attemptsRes, mpWinsRes, mpGamesRes, alreadyRes] = await Promise.all([
+  const [attemptsRes, mpResultsRes, alreadyRes, profileRes] = await Promise.all([
     supabase
       .from("quiz_attempts")
       .select("score, correct_count, total, max_streak, quiz_date")
       .eq("user_id", userId),
     supabase
       .from("match_results")
-      .select("*", { count: "exact", head: true })
+      .select("won")
       .eq("user_id", userId)
-      .eq("won", true),
-    supabase
-      .from("match_results")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId),
+      .order("played_at", { ascending: true }),
     supabase
       .from("user_achievements")
       .select("achievement_id")
       .eq("user_id", userId),
+    supabase
+      .from("profiles")
+      .select("xp")
+      .eq("id", userId)
+      .maybeSingle(),
   ]);
 
   const attempts = attemptsRes.data ?? [];
+  const mpResults = mpResultsRes.data ?? [];
   const alreadyUnlocked = new Set((alreadyRes.data ?? []).map((r) => r.achievement_id));
 
   const dailyStreak = computeDailyStreak(attempts.map((a) => a.quiz_date as string));
+  const perfectQuizCount = attempts.filter((a) => a.correct_count === a.total).length;
+  const bestEfficiency = attempts.reduce((best, a) => {
+    const maxScore = (a.total as number) * MAX_PER_Q;
+    const eff = maxScore > 0 ? Math.min(100, Math.round(((a.score as number) / maxScore) * 100)) : 0;
+    return Math.max(best, eff);
+  }, 0);
+  const mpConsecWins = computeMpConsecWins(mpResults as { won: boolean }[]);
+  const mpWins = mpResults.filter((r) => r.won).length;
+
   const stats: PlayerStats = {
     quizGames: attempts.length,
     perfectQuiz: attempts.some((a) => a.correct_count === a.total),
+    perfectQuizCount,
     bestQuizStreak: attempts.reduce((m, a) => Math.max(m, a.max_streak as number), 0),
-    mpGames: mpGamesRes.count ?? 0,
-    mpWins: mpWinsRes.count ?? 0,
+    bestEfficiency,
+    mpGames: mpResults.length,
+    mpWins,
+    mpConsecWins,
     dailyStreak,
-    xp: 0, // XP from profile — not needed for most predicates; fetch if required
+    xp: (profileRes.data?.xp as number) ?? 0,
   };
 
-  // Fetch XP separately (the profile.xp field).
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("xp")
-    .eq("id", userId)
-    .maybeSingle();
-  stats.xp = (profileData?.xp as number) ?? 0;
-
   const evaluated = evaluateAchievements(stats);
-  const newlyUnlocked = evaluated.filter(
-    (a) => a.unlocked && !alreadyUnlocked.has(a.id),
-  );
+  const newlyUnlocked = evaluated.filter((a) => a.unlocked && !alreadyUnlocked.has(a.id));
 
   if (newlyUnlocked.length > 0) {
     await supabase.from("user_achievements").insert(

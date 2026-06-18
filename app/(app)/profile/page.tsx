@@ -3,7 +3,8 @@ import { LogIn, Swords, Pencil } from "lucide-react";
 import { getProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getRank } from "@/lib/rank";
-import { evaluateAchievements, computeDailyStreak, type PlayerStats } from "@/lib/achievements";
+import { evaluateAchievements, computeDailyStreak, computeMpConsecWins, type PlayerStats } from "@/lib/achievements";
+import { maxPointsPerQuestion } from "@/lib/scoring";
 import { Button } from "@/components/ui/Button";
 
 function avatarFor(username: string, url: string | null) {
@@ -57,22 +58,27 @@ export default async function ProfilePage() {
     .order("played_at", { ascending: false })
     .limit(8);
 
-  const { count: mpWins } = await supabase
+  const { data: allMatchResults } = await supabase
     .from("match_results")
-    .select("*", { count: "exact", head: true })
+    .select("won")
     .eq("user_id", profile.id)
-    .eq("won", true);
+    .order("played_at", { ascending: true });
 
-  const { count: mpGames } = await supabase
-    .from("match_results")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", profile.id);
-
+  const MAX_PER_Q = maxPointsPerQuestion(15);
   const games = attempts?.length ?? 0;
   const totalCorrect = attempts?.reduce((s, a) => s + a.correct_count, 0) ?? 0;
   const totalQuestions = attempts?.reduce((s, a) => s + a.total, 0) ?? 0;
   const accuracy = totalQuestions ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
   const bestStreak = attempts?.reduce((m, a) => Math.max(m, a.max_streak), 0) ?? 0;
+  const perfectQuizCount = attempts?.filter((a) => a.correct_count === a.total).length ?? 0;
+  const bestEfficiency = (attempts ?? []).reduce((best, a) => {
+    const maxScore = (a.total as number) * MAX_PER_Q;
+    const eff = maxScore > 0 ? Math.min(100, Math.round(((a.score as number) / maxScore) * 100)) : 0;
+    return Math.max(best, eff);
+  }, 0);
+  const mpResultsList = (allMatchResults ?? []) as { won: boolean }[];
+  const mpWins = mpResultsList.filter((r) => r.won).length;
+  const mpConsecWins = computeMpConsecWins(mpResultsList);
   const recentMatches = (matches ?? []) as MatchRow[];
   const rank = getRank(profile.xp);
 
@@ -80,9 +86,12 @@ export default async function ProfilePage() {
   const stats: PlayerStats = {
     quizGames: games,
     perfectQuiz: attempts?.some((a) => a.correct_count === a.total) ?? false,
+    perfectQuizCount,
     bestQuizStreak: bestStreak,
-    mpGames: mpGames ?? 0,
-    mpWins: mpWins ?? 0,
+    bestEfficiency,
+    mpGames: mpResultsList.length,
+    mpWins,
+    mpConsecWins,
     dailyStreak,
     xp: profile.xp,
   };
@@ -142,7 +151,7 @@ export default async function ProfilePage() {
           <Stat value={games} label="Quizz joués" />
           <Stat value={`${accuracy}%`} label="Précision" />
           <Stat value={`🔥 ${bestStreak}`} label="Série max" />
-          <Stat value={`🏆 ${mpWins ?? 0}`} label="Victoires multi" />
+          <Stat value={`🏆 ${mpWins}`} label="Victoires multi" />
         </div>
       </div>
 
