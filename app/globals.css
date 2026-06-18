@@ -29,6 +29,38 @@ body {
   font-family: var(--font-sans);
 }
 
+/* ------------------------------------------------------------------ */
+/*  Dark mode — swap CSS custom properties used by Tailwind utilities  */
+/* ------------------------------------------------------------------ */
+.dark {
+  color-scheme: dark;
+
+  /* Semantic tokens */
+  --color-background:   #0f172a;
+  --color-surface:      #1e293b;
+  --color-sidebar:      #1e3a5f;
+  --color-sidebar-text: #bae6fd;
+
+  /* Keep brand colours vivid in dark mode */
+  --color-primary:      #60a5fa;
+
+  /* Invert the slate palette so bg-white → dark card, text-slate-800 → light */
+  --color-white:        #1e293b;
+  --color-slate-50:     #0f172a;
+  --color-slate-100:    #1e293b;
+  --color-slate-200:    #334155;
+  --color-slate-300:    #475569;
+  --color-slate-400:    #64748b;
+  --color-slate-500:    #94a3b8;
+  --color-slate-600:    #cbd5e1;
+  --color-slate-700:    #e2e8f0;
+  --color-slate-800:    #f1f5f9;
+  --color-slate-900:    #f8fafc;
+}
+
+.dark ::-webkit-scrollbar-track { background: #1e293b; }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+
 /* Custom scrollbar (ported from v1) */
 ::-webkit-scrollbar {
   width: 8px;

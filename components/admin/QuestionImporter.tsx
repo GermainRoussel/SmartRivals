@@ -15,27 +15,53 @@ import { ALL_QUESTIONS, CATALOG_TYPES } from "@/lib/quiz/bank";
 //  Templates                                                          //
 // ------------------------------------------------------------------ //
 
+// id is intentionally absent — it will be auto-generated on import.
 const TEMPLATES: Record<string, object> = {
-  MCQ: { id: "mcq-new-1", type: "MCQ", theme: "Géographie", difficulty: "Facile", text: "Question ?", options: ["Option A", "Option B", "Option C", "Option D"], correctAnswer: "Option A" },
-  TRUE_FALSE: { id: "tf-new-1", type: "TRUE_FALSE", theme: "Science", difficulty: "Facile", text: "Affirmation vraie ou fausse.", correctAnswer: true },
-  INPUT: { id: "input-new-1", type: "INPUT", theme: "Géographie", difficulty: "Facile", text: "Question à réponse libre ?", correctAnswer: "Réponse" },
-  SLIDER: { id: "slider-new-1", type: "SLIDER", theme: "Histoire", difficulty: "Moyen", text: "Estimation ?", min: 0, max: 2000, step: 1, unit: "", correctAnswer: 1000, tolerance: 50 },
-  ANAGRAM: { id: "ana-new-1", type: "ANAGRAM", theme: "Géographie", difficulty: "Moyen", text: "Reconstituez ce mot.", anagramWord: "FRANCE", correctAnswer: "FRANCE" },
-  WORD_GUESS: { id: "word-new-1", type: "WORD_GUESS", theme: "Nature", difficulty: "Moyen", text: "Indice sur le mot (5 lettres).", wordLength: 5, correctAnswer: "TIGRE" },
-  MATH_PUZZLE: { id: "math-new-1", type: "MATH_PUZZLE", theme: "Mathématiques", difficulty: "Facile", text: "Quel est le résultat ?", equation: "5 + ? = 10", mathGrid: [3, 4, 5, 6, 7, 8], correctAnswer: "5" },
-  REBUS: { id: "rebus-new-1", type: "REBUS", theme: "Logique", difficulty: "Moyen", text: "Déchiffrez ce rébus.", rebusEmojis: "🍎📱", correctAnswer: "Apple" },
-  ODD_ONE_OUT: { id: "odd-new-1", type: "ODD_ONE_OUT", theme: "Nature", difficulty: "Facile", text: "Lequel est l'intrus ?", oddOneOutItems: [{ id: "1", content: "A", isOdd: false }, { id: "2", content: "B", isOdd: false }, { id: "3", content: "C (intrus)", isOdd: true }, { id: "4", content: "D", isOdd: false }], correctAnswer: "3" },
-  ORDER: { id: "order-new-1", type: "ORDER", theme: "Science", difficulty: "Moyen", text: "Classez dans l'ordre.", items: [{ id: "a", content: "Premier" }, { id: "b", content: "Deuxième" }, { id: "c", content: "Troisième" }, { id: "d", content: "Quatrième" }], correctAnswer: ["a", "b", "c", "d"] },
-  MATCHING: { id: "match-new-1", type: "MATCHING", theme: "Géographie", difficulty: "Facile", text: "Reliez les éléments.", pairs: [{ left: "France", right: "Paris" }, { left: "Espagne", right: "Madrid" }, { left: "Italie", right: "Rome" }, { left: "Japon", right: "Tokyo" }] },
-  SORTING: { id: "sort-new-1", type: "SORTING", theme: "Nature", difficulty: "Moyen", text: "Classez dans les bons groupes.", groups: [{ id: "A", label: "Groupe A" }, { id: "B", label: "Groupe B" }], sortingItems: [{ id: "1", content: "Item 1", correctGroupId: "A" }, { id: "2", content: "Item 2", correctGroupId: "B" }, { id: "3", content: "Item 3", correctGroupId: "A" }, { id: "4", content: "Item 4", correctGroupId: "B" }, { id: "5", content: "Item 5", correctGroupId: "A" }] },
-  HOLE_TEXT: { id: "hole-new-1", type: "HOLE_TEXT", theme: "Histoire", difficulty: "Moyen", text: "Complétez la phrase.", holeText: "La capitale de la France est {Paris} et son président est {Macron}." },
-  BLIND_TEST: { id: "blind-new-1", type: "BLIND_TEST", theme: "Musique", difficulty: "Facile", text: "Quel est ce son ?", soundId: "doorbell", options: ["Sonnette", "Réveil", "Klaxon", "Sirène"], correctAnswer: "Sonnette", note: "soundId valides: doorbell, siren, alarm, phone, horn, laser" },
-  IMAGE_MCQ: { id: "image-mcq-new-1", type: "IMAGE_MCQ", theme: "Géographie", difficulty: "Facile", text: "À quel pays appartient ce drapeau ?", imageUrl: "https://flagcdn.com/w640/fr.png", options: ["France", "Italie", "Espagne", "Portugal"], correctAnswer: "France" },
-  CONNECTIONS: { id: "conn-new-1", type: "CONNECTIONS", theme: "Culture G", difficulty: "Moyen", text: "Créez 4 groupes de 4 mots liés.", connectionsGroups: [{ id: "A", label: "Groupe A", items: ["A1", "A2", "A3", "A4"] }, { id: "B", label: "Groupe B", items: ["B1", "B2", "B3", "B4"] }, { id: "C", label: "Groupe C", items: ["C1", "C2", "C3", "C4"] }, { id: "D", label: "Groupe D", items: ["D1", "D2", "D3", "D4"] }], correctAnswer: "COMPLEX_VALIDATION" },
-  CHESS: { id: "chess-new-1", type: "CHESS", theme: "Stratégie Échecs", difficulty: "Moyen", text: "Mat en 1 : trouvez le coup.", fen: "6k1/3R4/6K1/8/8/8/8/8 w - - 0 1", correctAnswer: "D7-D8", note: "Utilisez lichess.org/analysis pour générer le FEN." },
-  PIXEL_REVEAL: { id: "pix-new-1", type: "PIXEL_REVEAL", theme: "Nature", difficulty: "Moyen", text: "Devinez l'image !", pixelImage: "https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=600", correctAnswer: "LION" },
-  HOTSPOT: { id: "hotspot-new-1", type: "HOTSPOT", theme: "Science", difficulty: "Facile", text: "Cliquez sur la zone cible.", imageUrl: "https://...", hotspotTarget: { x: 50, y: 50, radius: 10 }, correctAnswer: { x: 50, y: 50 }, note: "x/y en % (0-100) de la largeur/hauteur de l'image." },
+  MCQ: { type: "MCQ", theme: "Géographie", difficulty: "Facile", text: "Question ?", options: ["Option A", "Option B", "Option C", "Option D"], correctAnswer: "Option A" },
+  TRUE_FALSE: { type: "TRUE_FALSE", theme: "Science", difficulty: "Facile", text: "Affirmation vraie ou fausse.", correctAnswer: true },
+  INPUT: { type: "INPUT", theme: "Géographie", difficulty: "Facile", text: "Question à réponse libre ?", correctAnswer: "Réponse" },
+  SLIDER: { type: "SLIDER", theme: "Histoire", difficulty: "Moyen", text: "Estimation ?", min: 0, max: 2000, step: 1, unit: "", correctAnswer: 1000, tolerance: 50 },
+  ANAGRAM: { type: "ANAGRAM", theme: "Géographie", difficulty: "Moyen", text: "Reconstituez ce mot.", anagramWord: "FRANCE", correctAnswer: "FRANCE" },
+  WORD_GUESS: { type: "WORD_GUESS", theme: "Nature", difficulty: "Moyen", text: "Indice sur le mot (5 lettres).", wordLength: 5, correctAnswer: "TIGRE" },
+  MATH_PUZZLE: { type: "MATH_PUZZLE", theme: "Mathématiques", difficulty: "Facile", text: "Quel est le résultat ?", equation: "5 + ? = 10", mathGrid: [3, 4, 5, 6, 7, 8], correctAnswer: "5" },
+  REBUS: { type: "REBUS", theme: "Logique", difficulty: "Moyen", text: "Déchiffrez ce rébus.", rebusEmojis: "🍎📱", correctAnswer: "Apple" },
+  ODD_ONE_OUT: { type: "ODD_ONE_OUT", theme: "Nature", difficulty: "Facile", text: "Lequel est l'intrus ?", oddOneOutItems: [{ id: "1", content: "A", isOdd: false }, { id: "2", content: "B", isOdd: false }, { id: "3", content: "C (intrus)", isOdd: true }, { id: "4", content: "D", isOdd: false }], correctAnswer: "3" },
+  ORDER: { type: "ORDER", theme: "Science", difficulty: "Moyen", text: "Classez dans l'ordre.", items: [{ id: "a", content: "Premier" }, { id: "b", content: "Deuxième" }, { id: "c", content: "Troisième" }, { id: "d", content: "Quatrième" }], correctAnswer: ["a", "b", "c", "d"] },
+  MATCHING: { type: "MATCHING", theme: "Géographie", difficulty: "Facile", text: "Reliez les éléments.", pairs: [{ left: "France", right: "Paris" }, { left: "Espagne", right: "Madrid" }, { left: "Italie", right: "Rome" }, { left: "Japon", right: "Tokyo" }] },
+  SORTING: { type: "SORTING", theme: "Nature", difficulty: "Moyen", text: "Classez dans les bons groupes.", groups: [{ id: "A", label: "Groupe A" }, { id: "B", label: "Groupe B" }], sortingItems: [{ id: "1", content: "Item 1", correctGroupId: "A" }, { id: "2", content: "Item 2", correctGroupId: "B" }, { id: "3", content: "Item 3", correctGroupId: "A" }, { id: "4", content: "Item 4", correctGroupId: "B" }, { id: "5", content: "Item 5", correctGroupId: "A" }] },
+  HOLE_TEXT: { type: "HOLE_TEXT", theme: "Histoire", difficulty: "Moyen", text: "Complétez la phrase.", holeText: "La capitale de la France est {Paris} et son président est {Macron}." },
+  BLIND_TEST: { type: "BLIND_TEST", theme: "Musique", difficulty: "Facile", text: "Quel est ce son ?", soundId: "doorbell", options: ["Sonnette", "Réveil", "Klaxon", "Sirène"], correctAnswer: "Sonnette", note: "soundId valides: doorbell, siren, alarm, phone, horn, laser" },
+  IMAGE_MCQ: { type: "IMAGE_MCQ", theme: "Géographie", difficulty: "Facile", text: "À quel pays appartient ce drapeau ?", imageUrl: "https://flagcdn.com/w640/fr.png", options: ["France", "Italie", "Espagne", "Portugal"], correctAnswer: "France" },
+  CONNECTIONS: { type: "CONNECTIONS", theme: "Culture G", difficulty: "Moyen", text: "Créez 4 groupes de 4 mots liés.", connectionsGroups: [{ id: "A", label: "Groupe A", items: ["A1", "A2", "A3", "A4"] }, { id: "B", label: "Groupe B", items: ["B1", "B2", "B3", "B4"] }, { id: "C", label: "Groupe C", items: ["C1", "C2", "C3", "C4"] }, { id: "D", label: "Groupe D", items: ["D1", "D2", "D3", "D4"] }], correctAnswer: "COMPLEX_VALIDATION" },
+  CHESS: { type: "CHESS", theme: "Stratégie Échecs", difficulty: "Moyen", text: "Mat en 1 : trouvez le coup.", fen: "6k1/3R4/6K1/8/8/8/8/8 w - - 0 1", correctAnswer: "D7-D8", note: "Utilisez lichess.org/analysis pour générer le FEN." },
+  PIXEL_REVEAL: { type: "PIXEL_REVEAL", theme: "Nature", difficulty: "Moyen", text: "Devinez l'image !", pixelImage: "https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=600", correctAnswer: "LION" },
+  HOTSPOT: { type: "HOTSPOT", theme: "Science", difficulty: "Facile", text: "Cliquez sur la zone cible.", imageUrl: "https://...", hotspotTarget: { x: 50, y: 50, radius: 10 }, correctAnswer: { x: 50, y: 50 }, note: "x/y en % (0-100) de la largeur/hauteur de l'image." },
 };
+
+// Prefix used to generate IDs for each question type.
+const TYPE_PREFIXES: Record<string, string> = {
+  MCQ: "mcq", TRUE_FALSE: "tf", INPUT: "input", SLIDER: "slider",
+  ANAGRAM: "ana", WORD_GUESS: "word", MATH_PUZZLE: "math", REBUS: "rebus",
+  ODD_ONE_OUT: "odd", ORDER: "order", MATCHING: "match", SORTING: "sort",
+  HOLE_TEXT: "hole", BLIND_TEST: "blind", IMAGE_MCQ: "image-mcq",
+  CONNECTIONS: "conn", CHESS: "chess", PIXEL_REVEAL: "pix",
+  HOTSPOT: "hotspot", DIFFERENCES: "diff", PATTERN: "pat",
+};
+
+function nextId(type: string, usedInBatch: Set<string>): string {
+  const prefix = TYPE_PREFIXES[type] ?? type.toLowerCase().replace(/_/g, "-");
+  const re = new RegExp(`^${prefix.replace(/-/g, "\\-")}-x?(\\d+)$`);
+  let max = 0;
+  for (const q of ALL_QUESTIONS) {
+    const m = q.id.match(re);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  for (const id of usedInBatch) {
+    const m = id.match(re);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `${prefix}-${max + 1}`;
+}
 
 const TYPE_LABELS: Partial<Record<string, string>> = {
   MCQ: "QCM Classique", TRUE_FALSE: "Vrai / Faux", INPUT: "Saisie libre",
@@ -92,13 +118,19 @@ function ImportPanel({ prefillJson, onImported }: { prefillJson?: string; onImpo
     if (!raw.trim()) return;
     try {
       const val = JSON.parse(raw);
-      const arr: Question[] = Array.isArray(val) ? val : [val];
+      const arr: Question[] = Array.isArray(val) ? [...val] : [{ ...val }];
       if (arr.length === 0) { setParseError("JSON vide."); return; }
-      for (const q of arr) {
-        if (!q.id || !q.type || !q.text) {
-          setParseError(`Champ manquant dans "${q.id ?? "?"}" — id, type et text requis.`);
+      const usedInBatch = new Set<string>();
+      for (let i = 0; i < arr.length; i++) {
+        const q = { ...arr[i] };
+        if (!q.type || !q.text) {
+          setParseError(`Champ manquant dans la question ${i + 1} — type et text sont requis.`);
           return;
         }
+        // Auto-assign id if missing
+        if (!q.id) q.id = nextId(q.type as string, usedInBatch);
+        usedInBatch.add(q.id);
+        arr[i] = q;
       }
       setParsed(arr);
     } catch (e) { setParseError(`JSON invalide : ${(e as Error).message}`); }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Logo } from "@/components/ui/Logo";
 import { BrandName } from "@/components/ui/BrandName";
 import { signOut } from "@/app/actions/auth";
@@ -61,6 +62,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       </nav>
 
       <div className={`space-y-1 ${collapsed ? "p-3" : "p-6"}`}>
+        <ThemeToggle collapsed={collapsed} />
+
         {/* Collapse / expand toggle */}
         <button
           onClick={onToggle}

@@ -30,7 +30,12 @@ export default function RootLayout({
     <html
       lang="fr"
       className={`${poppins.variable} ${fredoka.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      {/* Prevent white flash: apply dark class before first paint */}
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme'),d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||(t===null&&d))document.documentElement.classList.add('dark')}catch(e){}})()` }} />
+      </head>
       <body className="min-h-full">
         <Providers>{children}</Providers>
       </body>

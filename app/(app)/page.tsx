@@ -55,7 +55,7 @@ export default async function HomePage() {
   return (
     <div className="space-y-8 w-full max-w-6xl mx-auto mt-4 pb-24 md:pb-0 px-4">
       {/* Hero */}
-      <div className="bg-[#E0F2FE] rounded-[48px] p-8 md:p-14 text-center relative overflow-hidden border-4 border-white shadow-xl min-h-[320px] md:min-h-[400px] flex flex-col justify-center items-center w-full">
+      <div className="bg-[#E0F2FE] dark:bg-slate-800 rounded-[48px] p-8 md:p-14 text-center relative overflow-hidden border-4 border-white shadow-xl min-h-[320px] md:min-h-[400px] flex flex-col justify-center items-center w-full">
         <div className="absolute top-10 left-10 text-4xl animate-bounce [animation-delay:700ms] hidden md:block">⚡</div>
         <div className="absolute bottom-10 right-10 text-4xl animate-bounce hidden md:block">⭐</div>
         <div className="absolute top-10 right-20 text-blue-400 text-5xl rotate-12 hidden md:block">✦</div>
