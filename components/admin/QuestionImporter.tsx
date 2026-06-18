@@ -198,15 +198,23 @@ function TemplatesPanel() {
 //  Tab: Bibliothèque (all bank questions)                             //
 // ------------------------------------------------------------------ //
 
+const BANK_IDS = new Set(ALL_QUESTIONS.map((q) => q.id));
+
 function BankLibraryPanel({ onModify }: { onModify: (json: string) => void }) {
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  // Map of in-code question IDs that have been overridden by a DB version.
+  const [modifiedMap, setModifiedMap] = useState<Map<string, Question>>(new Map());
   const [toggling, setToggling] = useState<string | null>(null);
   const [openType, setOpenType] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getOverridesMap().then((m) => { setOverrides(m); setLoading(false); });
+    Promise.all([getOverridesMap(), getCustomQuestions()]).then(([ov, customQs]) => {
+      setOverrides(ov);
+      setModifiedMap(new Map(customQs.filter((q) => BANK_IDS.has(q.id)).map((q) => [q.id, q])));
+      setLoading(false);
+    });
   }, []);
 
   async function toggle(id: string) {
@@ -277,7 +285,10 @@ function BankLibraryPanel({ onModify }: { onModify: (json: string) => void }) {
               <div className="divide-y divide-slate-50">
                 {filtered.map((q) => {
                   const active = overrides[q.id] ?? true;
-                  const json = JSON.stringify(q, null, 2);
+                  // Use the DB-modified version if it exists, else the in-code version.
+                  const displayQ = modifiedMap.get(q.id) ?? q;
+                  const isModified = modifiedMap.has(q.id);
+                  const json = JSON.stringify(displayQ, null, 2);
                   return (
                     <div
                       key={q.id}
@@ -297,13 +308,18 @@ function BankLibraryPanel({ onModify }: { onModify: (json: string) => void }) {
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-700 leading-snug">{q.text}</p>
+                        <p className="text-sm font-medium text-slate-700 leading-snug">{displayQ.text}</p>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="font-mono text-[10px] text-slate-400">{q.id}</span>
-                          <span className="text-[10px] text-slate-400">{q.theme}</span>
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${DIFFICULTY_COLORS[q.difficulty] ?? "bg-slate-100 text-slate-500"}`}>
-                            {q.difficulty}
+                          <span className="font-mono text-[10px] text-slate-400">{displayQ.id}</span>
+                          <span className="text-[10px] text-slate-400">{displayQ.theme}</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${DIFFICULTY_COLORS[displayQ.difficulty] ?? "bg-slate-100 text-slate-500"}`}>
+                            {displayQ.difficulty}
                           </span>
+                          {isModified && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                              modifiée
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -312,7 +328,7 @@ function BankLibraryPanel({ onModify }: { onModify: (json: string) => void }) {
                         <CopyButton text={json} label="JSON" />
                         <button
                           onClick={() => onModify(json)}
-                          title="Modifier (copie dans l'onglet Importer)"
+                          title="Modifier"
                           className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-slate-100 hover:bg-amber-100 hover:text-amber-700 text-slate-600 transition-colors"
                         >
                           <Pencil size={12} /> Modifier
@@ -334,7 +350,9 @@ function BankLibraryPanel({ onModify }: { onModify: (json: string) => void }) {
 //  Tab: Questions ajoutées (custom DB questions)                      //
 // ------------------------------------------------------------------ //
 
-function CustomQuestionsPanel({ questions, onDelete }: { questions: Question[]; onDelete: (id: string) => void }) {
+function CustomQuestionsPanel({ questions: allQuestions, onDelete }: { questions: Question[]; onDelete: (id: string) => void }) {
+  // Overrides (same ID as an in-code question) are shown in Bibliothèque, not here.
+  const questions = allQuestions.filter((q) => !BANK_IDS.has(q.id));
   const [deleting, setDeleting] = useState<string | null>(null);
   const [openType, setOpenType] = useState<string | null>(null);
 
@@ -420,9 +438,11 @@ export function QuestionImporter() {
     setTab("import");
   }
 
+  const newQuestionsCount = customQuestions.filter((q) => !BANK_IDS.has(q.id)).length;
+
   const TABS: { key: Tab; label: string; badge?: number }[] = [
     { key: "bank", label: "Bibliothèque", badge: ALL_QUESTIONS.length },
-    { key: "custom", label: "Questions ajoutées", badge: customQuestions.length || undefined },
+    { key: "custom", label: "Questions ajoutées", badge: newQuestionsCount || undefined },
     { key: "import", label: "Importer" },
     { key: "templates", label: "Modèles JSON" },
   ];
