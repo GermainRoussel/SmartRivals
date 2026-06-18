@@ -6,6 +6,7 @@ import { getRank } from "@/lib/rank";
 import { evaluateAchievements, computeDailyStreak, computeMpConsecWins, type PlayerStats } from "@/lib/achievements";
 import { maxPointsPerQuestion } from "@/lib/scoring";
 import { Button } from "@/components/ui/Button";
+import { AchievementsSection } from "@/components/profile/AchievementsSection";
 
 function avatarFor(username: string, url: string | null) {
   return url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`;
@@ -98,12 +99,9 @@ export default async function ProfilePage() {
   const achievements = evaluateAchievements(stats);
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
 
-  // Merge persisted unlock dates into the achievement list.
-  const unlockedMap = new Map(
+  const unlockedMap: Record<string, string> = Object.fromEntries(
     (unlockedRows ?? []).map((r) => [r.achievement_id, r.unlocked_at as string]),
   );
-  const now = Date.now();
-  const TWO_DAYS_MS = 48 * 60 * 60 * 1000;
 
   return (
     <div className="max-w-3xl mx-auto mt-4 space-y-6">
@@ -155,53 +153,12 @@ export default async function ProfilePage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-display font-bold text-lg text-slate-800">
-            Succès ({unlockedCount}/{achievements.length})
-          </h3>
-          {dailyStreak > 0 && (
-            <span className="text-sm font-bold text-orange-500">
-              🔥 {dailyStreak} jour{dailyStreak > 1 ? "s" : ""} d&apos;affilée
-            </span>
-          )}
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {achievements.map((a) => {
-            const unlockedAt = unlockedMap.get(a.id);
-            const isNew = unlockedAt
-              ? now - new Date(unlockedAt).getTime() < TWO_DAYS_MS
-              : false;
-            return (
-              <div
-                key={a.id}
-                title={a.desc}
-                className={`p-3 rounded-2xl border text-center transition-all relative ${
-                  a.unlocked
-                    ? "bg-yellow-50 border-yellow-200"
-                    : "bg-slate-50 border-slate-100 opacity-60"
-                }`}
-              >
-                {isNew && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
-                    Nouveau
-                  </span>
-                )}
-                <div className={`text-3xl mb-1 ${a.unlocked ? "" : "grayscale opacity-50"}`}>
-                  {a.emoji}
-                </div>
-                <div className="font-bold text-sm text-slate-700">{a.name}</div>
-                <div className="text-xs text-slate-400 leading-tight mt-0.5">{a.desc}</div>
-                {unlockedAt && (
-                  <div className="text-[10px] text-slate-300 mt-1">
-                    {new Date(unlockedAt).toLocaleDateString("fr-FR")}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <AchievementsSection
+        achievements={achievements}
+        unlockedCount={unlockedCount}
+        dailyStreak={dailyStreak}
+        unlockedMap={unlockedMap}
+      />
 
       <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-50 flex items-center gap-2 font-display font-bold text-lg text-slate-800">
