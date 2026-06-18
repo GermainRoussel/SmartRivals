@@ -10,7 +10,12 @@ import { pickFilteredQuestionIds, getQuestionsByIds, todayKey } from "@/lib/quiz
 import { QuestionTheme, type Question } from "@/types";
 import { loadDailyQuestionsForClient } from "@/app/actions/questions";
 import { computePoints, nextStreak, maxPointsPerQuestion } from "@/lib/scoring";
-import { saveDailyAttempt, getTodayAttempt, type TodayAttempt } from "@/app/actions/quiz";
+import {
+  submitDailyAttempt,
+  getTodayAttempt,
+  type TodayAttempt,
+  type QuestionResult,
+} from "@/app/actions/quiz";
 import { syncAchievements } from "@/app/actions/achievements";
 import { toastAchievement } from "@/components/ui/toast/useToastStore";
 import { Confetti } from "@/components/ui/Confetti";
@@ -72,26 +77,33 @@ export default function DailyPage() {
 
   const streakRef = useRef(0);
   const savedRef = useRef(false);
+  // Per-question results sent to the server for authoritative scoring.
+  const questionResultsRef = useRef<Record<string, QuestionResult>>({});
   const currentQ = questions[index];
   const finished = index >= questions.length && questions.length > 0;
 
-  // Persist the result once when the quiz ends, then sync achievements.
-  // Skipped in practice and training modes.
+  // Official server-computed result (replaces client-computed score on leaderboard).
+  const [officialResult, setOfficialResult] = useState<TodayAttempt | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Submit raw results to server for authoritative scoring, then sync achievements.
+  // Skipped in practice and training modes (those don't persist to leaderboard).
   useEffect(() => {
     if (finished && started && !savedRef.current && !practice && !trainingMode) {
       savedRef.current = true;
-      void saveDailyAttempt({
-        score,
-        correctCount: correct,
-        total: questions.length,
-        maxStreak,
-      }).then(() =>
-        syncAchievements().then((newOnes) => {
-          newOnes.forEach((a) => toastAchievement(a.name, a.emoji));
-        }),
-      );
+      setSubmitting(true);
+      void submitDailyAttempt({ questionResults: questionResultsRef.current })
+        .then((res) => {
+          if ("ok" in res && res.ok) setOfficialResult(res.result);
+        })
+        .finally(() => setSubmitting(false))
+        .then(() =>
+          syncAchievements().then((newOnes) => {
+            newOnes.forEach((a) => toastAchievement(a.name, a.emoji));
+          }),
+        );
     }
-  }, [finished, started, score, correct, questions.length, maxStreak, practice, trainingMode]);
+  }, [finished, started, practice, trainingMode]);
 
   // Per-question countdown.
   useEffect(() => {
@@ -105,10 +117,18 @@ export default function DailyPage() {
   }, [started, resolved, finished, timeLeft]);
 
   const handleResult = useCallback(
-    (isCorrect: boolean) => {
+    (isCorrect: boolean, rawAnswer?: unknown) => {
       if (resolved) return;
       setResolved(true);
       setFeedback(isCorrect ? "correct" : "incorrect");
+
+      // Record raw result for server-authoritative scoring.
+      if (currentQ) {
+        questionResultsRef.current[currentQ.id] =
+          rawAnswer !== undefined
+            ? { answer: rawAnswer, timeRemaining: timeLeft }
+            : { selfValidated: isCorrect, timeRemaining: timeLeft };
+      }
 
       setScore((s) => s + computePoints({ isCorrect, timeRemaining: timeLeft, streak: streakRef.current }));
       const ns = nextStreak(streakRef.current, isCorrect);
@@ -126,7 +146,7 @@ export default function DailyPage() {
       }, FEEDBACK_MS);
       return () => clearTimeout(t);
     },
-    [resolved, timeLeft],
+    [resolved, timeLeft, currentQ],
   );
 
   // --- Loading ---
@@ -232,14 +252,32 @@ export default function DailyPage() {
 
   // --- Result screen ---
   if (finished) {
-    const accuracy = Math.round((correct / questions.length) * 100);
-    const maxScore = questions.length * maxPointsPerQuestion(MAX_TIME);
-    const efficiency = Math.round((score / maxScore) * 100);
-    const celebrate = accuracy >= 70 || maxStreak >= 3;
     const isFreeMode = practice || trainingMode;
+
+    // While the server validates (official mode only), show a brief spinner.
+    if (submitting && !isFreeMode) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[70vh] gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-blue-200 border-t-blue-500 animate-spin" />
+          <p className="text-slate-500 font-bold">Validation du score…</p>
+        </div>
+      );
+    }
+
+    // Use the server-computed result when available; fall back to client values.
+    const displayScore   = officialResult?.score        ?? score;
+    const displayCorrect = officialResult?.correctCount ?? correct;
+    const displayStreak  = officialResult?.maxStreak    ?? maxStreak;
+    const total          = officialResult?.total        ?? questions.length;
+
+    const accuracy  = total ? Math.round((displayCorrect / total) * 100) : 0;
+    const maxScore  = total * maxPointsPerQuestion(MAX_TIME);
+    const efficiency = maxScore ? Math.round((displayScore / maxScore) * 100) : 0;
+    const celebrate = accuracy >= 70 || displayStreak >= 3;
+
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-4 animate-in zoom-in-95 relative">
-        <Confetti active={celebrate} />
+        <Confetti active={celebrate && !isFreeMode} />
         <Trophy className="w-24 h-24 text-yellow-500 mb-6 animate-bounce" />
         <h2 className="font-display text-5xl font-bold text-slate-800 mb-4">
           {isFreeMode ? "Entraînement terminé !" : "Quizz Terminé !"}
@@ -250,10 +288,11 @@ export default function DailyPage() {
           </p>
         )}
         <p className="text-2xl text-slate-500 mb-10">
-          Score final : <span className="font-black text-primary text-4xl">{score} pts</span>
+          Score final :{" "}
+          <span className="font-black text-primary text-4xl">{displayScore} pts</span>
         </p>
         <div className="grid grid-cols-3 gap-4 w-full max-w-lg mb-10">
-          <Stat label="Série Max" value={`🔥 ${maxStreak}`} color="text-orange-500" />
+          <Stat label="Série Max" value={`🔥 ${displayStreak}`} color="text-orange-500" />
           <Stat label="Précision" value={`${accuracy}%`} color="text-green-500" />
           <Stat label="Efficacité" value={`${efficiency}%`} color="text-blue-500" />
         </div>

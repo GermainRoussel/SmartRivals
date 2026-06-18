@@ -7,6 +7,7 @@ import { evaluateAchievements, computeDailyStreak, computeMpConsecWins, type Pla
 import { maxPointsPerQuestion } from "@/lib/scoring";
 import { Button } from "@/components/ui/Button";
 import { AchievementsSection } from "@/components/profile/AchievementsSection";
+import { DangerZone } from "@/components/profile/DangerZone";
 
 function avatarFor(username: string, url: string | null) {
   return url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`;
@@ -192,6 +193,8 @@ export default async function ProfilePage() {
           </div>
         )}
       </div>
+
+      <DangerZone />
     </div>
   );
 }
