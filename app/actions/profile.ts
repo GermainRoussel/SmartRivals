@@ -31,7 +31,10 @@ export async function updateProfile(
     })
     .eq("id", user.id);
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505") return { error: "Ce pseudo est déjà pris." };
+    return { error: error.message };
+  }
 
   revalidatePath("/profile");
   revalidatePath("/");

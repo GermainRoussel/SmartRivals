@@ -51,11 +51,17 @@ export default async function PublicProfilePage({
           <p className="text-slate-500 text-center max-w-md mt-3">{profile.bio}</p>
         )}
 
-        <div className="mt-8 w-full grid grid-cols-3 gap-4 text-center">
-          <Stat value={games} label="Quizz joués" />
-          <Stat value={`${accuracy}%`} label="Précision" />
-          <Stat value={`🔥 ${bestStreak}`} label="Série max" />
-        </div>
+        {games === 0 ? (
+          <p className="mt-8 text-slate-400 text-sm">
+            Ce joueur n&apos;a pas encore participé à un quiz.
+          </p>
+        ) : (
+          <div className="mt-8 w-full grid grid-cols-3 gap-4 text-center">
+            <Stat value={games} label="Quizz joués" />
+            <Stat value={`${accuracy}%`} label="Précision" />
+            <Stat value={`🔥 ${bestStreak}`} label="Série max" />
+          </div>
+        )}
       </div>
     </div>
   );

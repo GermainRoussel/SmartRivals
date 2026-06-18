@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Clock, Flame, Trophy, Play, Zap } from "lucide-react";
+import { Clock, Flame, Trophy, Play, Zap, CheckCircle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { QuestionPlayer } from "@/components/quiz/QuestionPlayer";
 import { getDailyQuestions, todayKey } from "@/lib/quiz/bank";
 import { computePoints, nextStreak, maxPointsPerQuestion } from "@/lib/scoring";
-import { saveDailyAttempt } from "@/app/actions/quiz";
+import { saveDailyAttempt, getTodayAttempt, type TodayAttempt } from "@/app/actions/quiz";
+import { syncAchievements } from "@/app/actions/achievements";
+import { toastAchievement } from "@/components/ui/toast/useToastStore";
+import { Confetti } from "@/components/ui/Confetti";
 
 const MAX_TIME = 15;
 const FEEDBACK_MS = 1500;
@@ -15,6 +18,19 @@ const FEEDBACK_MS = 1500;
 export default function DailyPage() {
   const questions = useMemo(() => getDailyQuestions(todayKey()), []);
 
+  // --- Already-played guard ---
+  const [checkingAttempt, setCheckingAttempt] = useState(true);
+  const [todayResult, setTodayResult] = useState<TodayAttempt | null>(null);
+  const [practice, setPractice] = useState(false);
+
+  useEffect(() => {
+    getTodayAttempt().then((result) => {
+      setTodayResult(result);
+      setCheckingAttempt(false);
+    });
+  }, []);
+
+  // --- Quiz state ---
   const [started, setStarted] = useState(false);
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -31,18 +47,23 @@ export default function DailyPage() {
   const currentQ = questions[index];
   const finished = index >= questions.length;
 
-  // Persist the result once, when the quiz ends (no-op if not signed in).
+  // Persist the result once when the quiz ends, then sync achievements.
+  // Skipped in practice mode (already played today).
   useEffect(() => {
-    if (finished && started && !savedRef.current) {
+    if (finished && started && !savedRef.current && !practice) {
       savedRef.current = true;
       void saveDailyAttempt({
         score,
         correctCount: correct,
         total: questions.length,
         maxStreak,
-      });
+      }).then(() =>
+        syncAchievements().then((newOnes) => {
+          newOnes.forEach((a) => toastAchievement(a.name, a.emoji));
+        }),
+      );
     }
-  }, [finished, started, score, correct, questions.length, maxStreak]);
+  }, [finished, started, score, correct, questions.length, maxStreak, practice]);
 
   // Per-question countdown.
   useEffect(() => {
@@ -80,6 +101,35 @@ export default function DailyPage() {
     [resolved, timeLeft],
   );
 
+  // --- Loading (checking attempt) ---
+  if (checkingAttempt) {
+    return (
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <div className="w-10 h-10 rounded-full border-4 border-blue-200 border-t-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
+  // --- Already played today (and not in practice mode) ---
+  if (todayResult && !practice) {
+    const accuracy = todayResult.total
+      ? Math.round((todayResult.correctCount / todayResult.total) * 100)
+      : 0;
+    const maxScore = todayResult.total * maxPointsPerQuestion(MAX_TIME);
+    const efficiency = maxScore ? Math.round((todayResult.score / maxScore) * 100) : 0;
+    return (
+      <AlreadyPlayedScreen
+        todayResult={todayResult}
+        accuracy={accuracy}
+        efficiency={efficiency}
+        onPractice={() => {
+          setPractice(true);
+          savedRef.current = false;
+        }}
+      />
+    );
+  }
+
   // --- Intro screen ---
   if (!started) {
     return (
@@ -88,13 +138,18 @@ export default function DailyPage() {
           <Zap size={64} strokeWidth={2} className="fill-current" />
         </div>
         <h2 className="font-display text-4xl font-bold text-slate-800 mb-4">
-          Le Quizz du Jour
+          {practice ? "Mode entraînement" : "Le Quizz du Jour"}
         </h2>
         <p className="text-xl text-slate-500 mb-10 max-w-md">
           {questions.length} questions variées.
           <br />
           <span className="font-bold text-red-500 text-2xl">{MAX_TIME} secondes</span> par
           question.
+          {practice && (
+            <span className="block mt-2 text-sm text-slate-400">
+              Ce résultat ne sera pas enregistré.
+            </span>
+          )}
         </p>
         <Button
           size="lg"
@@ -109,28 +164,24 @@ export default function DailyPage() {
 
   // --- Result screen ---
   if (finished) {
+    const accuracy = Math.round((correct / questions.length) * 100);
     const maxScore = questions.length * maxPointsPerQuestion(MAX_TIME);
+    const efficiency = Math.round((score / maxScore) * 100);
+    const celebrate = accuracy >= 70 || maxStreak >= 3;
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-4 animate-in zoom-in-95">
+      <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-4 animate-in zoom-in-95 relative">
+        <Confetti active={celebrate} />
         <Trophy className="w-24 h-24 text-yellow-500 mb-6 animate-bounce" />
         <h2 className="font-display text-5xl font-bold text-slate-800 mb-4">
-          Quizz Terminé !
+          {practice ? "Entraînement terminé !" : "Quizz Terminé !"}
         </h2>
         <p className="text-2xl text-slate-500 mb-10">
           Score final : <span className="font-black text-primary text-4xl">{score} pts</span>
         </p>
         <div className="grid grid-cols-3 gap-4 w-full max-w-lg mb-10">
           <Stat label="Série Max" value={`🔥 ${maxStreak}`} color="text-orange-500" />
-          <Stat
-            label="Précision"
-            value={`${Math.round((score / maxScore) * 100)}%`}
-            color="text-blue-500"
-          />
-          <Stat
-            label="Correctes"
-            value={`${correct}/${questions.length}`}
-            color="text-green-500"
-          />
+          <Stat label="Précision" value={`${accuracy}%`} color="text-green-500" />
+          <Stat label="Efficacité" value={`${efficiency}%`} color="text-blue-500" />
         </div>
         <Link href="/leaderboard">
           <Button size="lg">Voir le classement</Button>
@@ -169,6 +220,15 @@ export default function DailyPage() {
           <span className="text-orange-500 font-black text-2xl">{streak}</span>
         </div>
       </div>
+
+      {/* Practice mode badge */}
+      {practice && (
+        <div className="mb-4 text-center">
+          <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-bold uppercase tracking-wide">
+            Mode entraînement — non enregistré
+          </span>
+        </div>
+      )}
 
       {/* Progress */}
       <div className="mb-6 px-2">
@@ -218,6 +278,75 @@ function Stat({ label, value, color }: { label: string; value: string; color: st
         {label}
       </div>
       <div className={`font-black text-3xl ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+function useCountdown() {
+  const [countdown, setCountdown] = useState("");
+
+  useEffect(() => {
+    function update() {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0);
+      const diff = midnight.getTime() - now.getTime();
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      setCountdown(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
+    }
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return countdown;
+}
+
+function AlreadyPlayedScreen({
+  todayResult,
+  accuracy,
+  efficiency,
+  onPractice,
+}: {
+  todayResult: TodayAttempt;
+  accuracy: number;
+  efficiency: number;
+  onPractice: () => void;
+}) {
+  const countdown = useCountdown();
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-4 animate-in zoom-in-95">
+      <div className="w-28 h-28 bg-green-100 rounded-[40px] flex items-center justify-center mb-8 text-green-500 shadow-inner rotate-3">
+        <CheckCircle size={56} strokeWidth={2} />
+      </div>
+      <h2 className="font-display text-4xl font-bold text-slate-800 mb-2">
+        Déjà joué aujourd&apos;hui !
+      </h2>
+      <p className="text-slate-500 mb-1 text-lg">Prochain quiz dans</p>
+      <p className="font-mono text-4xl font-black text-blue-600 mb-8 tracking-widest">
+        {countdown}
+      </p>
+
+      <div className="grid grid-cols-3 gap-4 w-full max-w-lg mb-10">
+        <Stat label="Score" value={`${todayResult.score} pts`} color="text-blue-500" />
+        <Stat label="Précision" value={`${accuracy}%`} color="text-green-500" />
+        <Stat label="Efficacité" value={`${efficiency}%`} color="text-orange-500" />
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Link href="/leaderboard">
+          <Button size="lg">Voir le classement</Button>
+        </Link>
+        <Link href="/multiplayer">
+          <Button size="lg" variant="outline">⚔️ Jouer en multi</Button>
+        </Link>
+        <Button size="lg" variant="outline" onClick={onPractice}>
+          <RotateCcw size={18} className="mr-2" /> Entraînement
+        </Button>
+      </div>
     </div>
   );
 }

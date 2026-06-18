@@ -8,6 +8,9 @@ import { QuestionPlayer } from "@/components/quiz/QuestionPlayer";
 import { Button } from "@/components/ui/Button";
 import { getQuestionsByIds } from "@/lib/quiz/bank";
 import { computePoints, nextStreak } from "@/lib/scoring";
+import { syncAchievements } from "@/app/actions/achievements";
+import { toastAchievement } from "@/components/ui/toast/useToastStore";
+import { Confetti } from "@/components/ui/Confetti";
 import {
   leaveRoom,
   startGame,
@@ -120,7 +123,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
       rank: myRank,
       totalPlayers: players.length,
       won: myRank === 1,
-    });
+    }).then(() =>
+      syncAchievements().then((newOnes) => {
+        newOnes.forEach((a) => toastAchievement(a.name, a.emoji));
+      }),
+    );
   }, [room?.status, me, players, roomId]);
 
   const handleAnswer = useCallback(
@@ -220,8 +227,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
   // ---------------- RESULTS ----------------
   if (room.status === "finished") {
     const winner = ranked[0];
+    const iWon = winner?.user_id === me;
     return (
-      <div className="max-w-2xl mx-auto py-8 text-center">
+      <div className="max-w-2xl mx-auto py-8 text-center relative">
+        <Confetti active={iWon} />
         <Trophy className="w-20 h-20 text-yellow-500 mx-auto mb-4 animate-bounce" />
         <h2 className="font-display text-4xl font-bold text-slate-800 mb-2">Partie terminée !</h2>
         {winner && (
