@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Clock, Flame, Trophy, Play, Zap, CheckCircle, RotateCcw } from "lucide-react";
+import { Clock, Flame, Trophy, Play, Zap, CheckCircle, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { QuestionPlayer } from "@/components/quiz/QuestionPlayer";
+import { FilterControls, type Difficulty } from "@/components/quiz/FilterControls";
+import { pickFilteredQuestionIds, getQuestionsByIds, todayKey } from "@/lib/quiz/bank";
+import { QuestionTheme, type Question } from "@/types";
 import { loadDailyQuestionsForClient } from "@/app/actions/questions";
 import { computePoints, nextStreak, maxPointsPerQuestion } from "@/lib/scoring";
 import { saveDailyAttempt, getTodayAttempt, type TodayAttempt } from "@/app/actions/quiz";
@@ -14,11 +17,33 @@ import { Confetti } from "@/components/ui/Confetti";
 
 const MAX_TIME = 15;
 const FEEDBACK_MS = 1500;
+const DAILY_COUNT = 10;
 
 export default function DailyPage() {
-  const [questions, setQuestions] = useState<import("@/types").Question[]>([]);
+  // Server-loaded official daily questions.
+  const [serverQuestions, setServerQuestions] = useState<Question[]>([]);
 
-  // --- Already-played guard + question loading (merged into one loading phase) ---
+  // Training mode: optional filters chosen before starting (score not saved).
+  const [trainingMode, setTrainingMode] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [themes, setThemes] = useState<QuestionTheme[]>([]);
+  const [difficulty, setDifficulty] = useState<Difficulty>("ANY");
+
+  const toggleTheme = (t: QuestionTheme) =>
+    setThemes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+
+  const filtersActive = themes.length > 0 || difficulty !== "ANY";
+
+  const trainingQuestions = useMemo(() => {
+    if (!filtersActive) return serverQuestions;
+    const ids = pickFilteredQuestionIds(`training-${todayKey()}`, DAILY_COUNT, {
+      themes: themes.length ? themes : undefined,
+      difficulty: difficulty === "ANY" ? undefined : difficulty,
+    });
+    return getQuestionsByIds(ids);
+  }, [filtersActive, serverQuestions, themes, difficulty]);
+
+  // --- Already-played guard + question loading ---
   const [checkingAttempt, setCheckingAttempt] = useState(true);
   const [todayResult, setTodayResult] = useState<TodayAttempt | null>(null);
   const [practice, setPractice] = useState(false);
@@ -26,10 +51,12 @@ export default function DailyPage() {
   useEffect(() => {
     Promise.all([getTodayAttempt(), loadDailyQuestionsForClient()]).then(([result, qs]) => {
       setTodayResult(result);
-      setQuestions(qs);
+      setServerQuestions(qs);
       setCheckingAttempt(false);
     });
   }, []);
+
+  const questions = trainingMode ? trainingQuestions : serverQuestions;
 
   // --- Quiz state ---
   const [started, setStarted] = useState(false);
@@ -46,12 +73,12 @@ export default function DailyPage() {
   const streakRef = useRef(0);
   const savedRef = useRef(false);
   const currentQ = questions[index];
-  const finished = index >= questions.length;
+  const finished = index >= questions.length && questions.length > 0;
 
   // Persist the result once when the quiz ends, then sync achievements.
-  // Skipped in practice mode (already played today).
+  // Skipped in practice and training modes.
   useEffect(() => {
-    if (finished && started && !savedRef.current && !practice) {
+    if (finished && started && !savedRef.current && !practice && !trainingMode) {
       savedRef.current = true;
       void saveDailyAttempt({
         score,
@@ -64,7 +91,7 @@ export default function DailyPage() {
         }),
       );
     }
-  }, [finished, started, score, correct, questions.length, maxStreak, practice]);
+  }, [finished, started, score, correct, questions.length, maxStreak, practice, trainingMode]);
 
   // Per-question countdown.
   useEffect(() => {
@@ -102,7 +129,7 @@ export default function DailyPage() {
     [resolved, timeLeft],
   );
 
-  // --- Loading (checking attempt) ---
+  // --- Loading ---
   if (checkingAttempt) {
     return (
       <div className="flex items-center justify-center min-h-[70vh]">
@@ -111,8 +138,8 @@ export default function DailyPage() {
     );
   }
 
-  // --- Already played today (and not in practice mode) ---
-  if (todayResult && !practice) {
+  // --- Already played today (and not in practice/training mode) ---
+  if (todayResult && !practice && !trainingMode) {
     const accuracy = todayResult.total
       ? Math.round((todayResult.correctCount / todayResult.total) * 100)
       : 0;
@@ -127,6 +154,10 @@ export default function DailyPage() {
           setPractice(true);
           savedRef.current = false;
         }}
+        onTraining={() => {
+          setShowFilters(true);
+          savedRef.current = false;
+        }}
       />
     );
   }
@@ -134,30 +165,66 @@ export default function DailyPage() {
   // --- Intro screen ---
   if (!started) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-4 animate-in zoom-in-95">
+      <div className="flex flex-col items-center min-h-[70vh] p-4 pt-10 animate-in zoom-in-95 max-w-2xl mx-auto w-full">
         <div className="w-32 h-32 bg-blue-100 rounded-[40px] flex items-center justify-center mb-8 text-blue-600 shadow-inner -rotate-3">
           <Zap size={64} strokeWidth={2} className="fill-current" />
         </div>
-        <h2 className="font-display text-4xl font-bold text-slate-800 mb-4">
+        <h2 className="font-display text-4xl font-bold text-slate-800 mb-4 text-center">
           {practice ? "Mode entraînement" : "Le Quizz du Jour"}
         </h2>
-        <p className="text-xl text-slate-500 mb-10 max-w-md">
-          {questions.length} questions variées.
-          <br />
-          <span className="font-bold text-red-500 text-2xl">{MAX_TIME} secondes</span> par
-          question.
+        <p className="text-xl text-slate-500 mb-8 max-w-md text-center">
+          {(trainingMode ? trainingQuestions : serverQuestions).length} questions variées.{" "}
+          <span className="font-bold text-red-500">{MAX_TIME} secondes</span> par question.
           {practice && (
-            <span className="block mt-2 text-sm text-slate-400">
-              Ce résultat ne sera pas enregistré.
-            </span>
+            <span className="block mt-2 text-sm text-slate-400">Ce résultat ne sera pas enregistré.</span>
           )}
         </p>
+
+        {/* Filter toggle (not shown in practice mode) */}
+        {!practice && (
+          <>
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              className={`mb-4 px-5 py-2.5 rounded-2xl border-2 transition-all flex items-center gap-2 font-bold text-sm ${
+                filtersActive
+                  ? "bg-blue-50 border-blue-300 text-blue-600"
+                  : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+              }`}
+            >
+              <SlidersHorizontal size={16} />
+              Mode entraînement filtré
+              {filtersActive && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">actif</span>
+              )}
+            </button>
+
+            {showFilters && (
+              <div className="w-full bg-white rounded-[28px] p-6 shadow-sm border border-slate-100 mb-6 text-left">
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-4">
+                  ⚠️ Score non comptabilisé au classement
+                </p>
+                <FilterControls
+                  themes={themes}
+                  difficulty={difficulty}
+                  toggleTheme={toggleTheme}
+                  resetThemes={() => setThemes([])}
+                  setDifficulty={setDifficulty}
+                />
+              </div>
+            )}
+          </>
+        )}
+
         <Button
           size="lg"
-          onClick={() => setStarted(true)}
-          className="px-12 py-6 text-xl rounded-2xl animate-pulse shadow-xl shadow-blue-200"
+          onClick={() => {
+            if (filtersActive && !practice) setTrainingMode(true);
+            setStarted(true);
+          }}
+          className="px-12 py-6 text-xl rounded-2xl shadow-xl shadow-blue-200"
         >
-          C&apos;est parti ! <Play fill="currentColor" className="ml-3" />
+          {filtersActive && !practice ? "Entraînement !" : "C'est parti !"}{" "}
+          <Play fill="currentColor" className="ml-3" />
         </Button>
       </div>
     );
@@ -169,13 +236,19 @@ export default function DailyPage() {
     const maxScore = questions.length * maxPointsPerQuestion(MAX_TIME);
     const efficiency = Math.round((score / maxScore) * 100);
     const celebrate = accuracy >= 70 || maxStreak >= 3;
+    const isFreeMode = practice || trainingMode;
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-4 animate-in zoom-in-95 relative">
         <Confetti active={celebrate} />
         <Trophy className="w-24 h-24 text-yellow-500 mb-6 animate-bounce" />
         <h2 className="font-display text-5xl font-bold text-slate-800 mb-4">
-          {practice ? "Entraînement terminé !" : "Quizz Terminé !"}
+          {isFreeMode ? "Entraînement terminé !" : "Quizz Terminé !"}
         </h2>
+        {isFreeMode && (
+          <p className="text-sm font-bold text-blue-500 bg-blue-50 border border-blue-200 px-4 py-2 rounded-full mb-4">
+            Mode entraînement — score non comptabilisé
+          </p>
+        )}
         <p className="text-2xl text-slate-500 mb-10">
           Score final : <span className="font-black text-primary text-4xl">{score} pts</span>
         </p>
@@ -222,11 +295,10 @@ export default function DailyPage() {
         </div>
       </div>
 
-      {/* Practice mode badge */}
-      {practice && (
+      {(practice || trainingMode) && (
         <div className="mb-4 text-center">
           <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-bold uppercase tracking-wide">
-            Mode entraînement — non enregistré
+            Entraînement — non enregistré
           </span>
         </div>
       )}
@@ -275,9 +347,7 @@ export default function DailyPage() {
 function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center">
-      <div className="text-sm text-slate-400 font-bold uppercase tracking-wider mb-1">
-        {label}
-      </div>
+      <div className="text-sm text-slate-400 font-bold uppercase tracking-wider mb-1">{label}</div>
       <div className={`font-black text-3xl ${color}`}>{value}</div>
     </div>
   );
@@ -295,7 +365,9 @@ function useCountdown() {
       const h = Math.floor(diff / 3_600_000);
       const m = Math.floor((diff % 3_600_000) / 60_000);
       const s = Math.floor((diff % 60_000) / 1_000);
-      setCountdown(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
+      setCountdown(
+        `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`,
+      );
     }
     update();
     const id = setInterval(update, 1000);
@@ -310,11 +382,13 @@ function AlreadyPlayedScreen({
   accuracy,
   efficiency,
   onPractice,
+  onTraining,
 }: {
   todayResult: TodayAttempt;
   accuracy: number;
   efficiency: number;
   onPractice: () => void;
+  onTraining: () => void;
 }) {
   const countdown = useCountdown();
 
@@ -327,9 +401,7 @@ function AlreadyPlayedScreen({
         Déjà joué aujourd&apos;hui !
       </h2>
       <p className="text-slate-500 mb-1 text-lg">Prochain quiz dans</p>
-      <p className="font-mono text-4xl font-black text-blue-600 mb-8 tracking-widest">
-        {countdown}
-      </p>
+      <p className="font-mono text-4xl font-black text-blue-600 mb-8 tracking-widest">{countdown}</p>
 
       <div className="grid grid-cols-3 gap-4 w-full max-w-lg mb-10">
         <Stat label="Score" value={`${todayResult.score} pts`} color="text-blue-500" />
@@ -345,7 +417,10 @@ function AlreadyPlayedScreen({
           <Button size="lg" variant="outline">⚔️ Jouer en multi</Button>
         </Link>
         <Button size="lg" variant="outline" onClick={onPractice}>
-          <RotateCcw size={18} className="mr-2" /> Entraînement
+          <RotateCcw size={18} className="mr-2" /> Rejouer
+        </Button>
+        <Button size="lg" variant="outline" onClick={onTraining}>
+          <SlidersHorizontal size={18} className="mr-2" /> Entraînement filtré
         </Button>
       </div>
     </div>

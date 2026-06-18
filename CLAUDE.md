@@ -25,7 +25,7 @@ identity is a hard requirement — it is the soul of the product.
 - **Supabase** — Auth, Postgres, Realtime, Storage, Row Level Security
 - **Zustand** (client UI state) + **TanStack Query** (server state)
 - **chess.js** (real move legality + checkmate) driving a custom board UI
-- **@dnd-kit** (drag-and-drop question types) · **Recharts** (leaderboard) · **lucide-react**
+- **@dnd-kit** (drag-and-drop question types) · **lucide-react**
 
 > ⚠️ Next.js 16 has breaking changes vs older versions — see `AGENTS.md`. When unsure
 > about an API, consult `node_modules/next/dist/docs/` rather than relying on memory.

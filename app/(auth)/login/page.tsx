@@ -119,7 +119,13 @@ export default function LoginPage() {
         )}
 
         <p className="mt-6 text-xs text-slate-400">
-          En continuant, vous acceptez nos CGU et notre politique de confidentialité.
+          En continuant, vous acceptez nos{" "}
+          <Link href="/cgu" className="underline hover:text-slate-600">CGU</Link>{" "}
+          et notre{" "}
+          <Link href="/confidentialite" className="underline hover:text-slate-600">
+            politique de confidentialité
+          </Link>
+          .
         </p>
       </div>
     </div>

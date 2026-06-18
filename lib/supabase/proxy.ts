@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured } from "./config";
 
 // Routes reachable without a session.
-const PUBLIC_PATHS = ["/login", "/auth"];
+const PUBLIC_PATHS = ["/login", "/auth", "/cgu", "/confidentialite"];
 
 /**
  * Refreshes the Supabase session cookie on every request and, once auth is

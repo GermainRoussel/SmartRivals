@@ -16,9 +16,23 @@ const fredoka = Fredoka({
 });
 
 export const metadata: Metadata = {
-  title: "Smart Rivals",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://smartrivals.app",
+  ),
+  title: {
+    default: "SmartRivals",
+    template: "%s — SmartRivals",
+  },
   description:
-    "Plateforme de quiz compétitif quotidien et multijoueur : échecs, logique et culture générale.",
+    "Plateforme de quiz compétitif quotidien et multijoueur : QCM, échecs, logique et culture générale.",
+  openGraph: {
+    siteName: "SmartRivals",
+    locale: "fr_FR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({

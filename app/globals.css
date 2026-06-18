@@ -16,6 +16,12 @@
   /* Logo letters: "S"mart (blue) "R"ivals (yellow) */
   --color-brand-blue: #8bd8ee;
   --color-brand-yellow: #fcd172;
+
+  /* Page-level semantic tokens */
+  --color-hero: #E0F2FE;       /* Home hero background */
+  --color-cta: #FCD34D;        /* Primary CTA background */
+  --color-cta-hover: #FBBF24;  /* Primary CTA hover */
+  --color-cta-border: #F59E0B; /* Primary CTA border-bottom */
 }
 
 /* Fonts are injected at runtime via next/font on <html> */

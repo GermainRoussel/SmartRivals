@@ -55,7 +55,7 @@ export default async function HomePage() {
   return (
     <div className="space-y-8 w-full max-w-6xl mx-auto mt-4 pb-24 md:pb-0 px-4">
       {/* Hero */}
-      <div className="bg-[#E0F2FE] dark:bg-slate-800 rounded-[48px] p-8 md:p-14 text-center relative overflow-hidden border-4 border-white shadow-xl min-h-[320px] md:min-h-[400px] flex flex-col justify-center items-center w-full">
+      <div className="bg-hero dark:bg-slate-800 rounded-[48px] p-8 md:p-14 text-center relative overflow-hidden border-4 border-white shadow-xl min-h-[320px] md:min-h-[400px] flex flex-col justify-center items-center w-full">
         <div className="absolute top-10 left-10 text-4xl animate-bounce [animation-delay:700ms] hidden md:block">⚡</div>
         <div className="absolute bottom-10 right-10 text-4xl animate-bounce hidden md:block">⭐</div>
         <div className="absolute top-10 right-20 text-blue-400 text-5xl rotate-12 hidden md:block">✦</div>
@@ -138,7 +138,7 @@ export default async function HomePage() {
 }
 
 const CTA_PRIMARY =
-  "bg-[#FCD34D] hover:bg-[#FBBF24] text-slate-900 border-b-8 border-[#F59E0B] text-xl md:text-2xl px-10 md:px-14 py-5 rounded-full shadow-xl active:border-b-0 active:translate-y-2 transition-all w-full sm:w-auto font-display font-medium inline-flex items-center justify-center";
+  "bg-cta hover:bg-cta-hover text-slate-900 border-b-8 border-cta-border text-xl md:text-2xl px-10 md:px-14 py-5 rounded-full shadow-xl active:border-b-0 active:translate-y-2 transition-all w-full sm:w-auto font-display font-medium inline-flex items-center justify-center";
 
 const CTA_SECONDARY =
   "bg-white hover:bg-slate-50 text-slate-700 border-b-8 border-slate-200 text-xl md:text-2xl px-10 md:px-14 py-5 rounded-full shadow-xl active:border-b-0 active:translate-y-2 transition-all w-full sm:w-auto font-display font-medium inline-flex items-center justify-center";
