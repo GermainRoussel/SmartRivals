@@ -975,7 +975,7 @@ export function todayKey(date = new Date()): string {
   return date.toISOString().slice(0, 10);
 }
 
-const ALL_QUESTIONS: Question[] = Object.values(SAMPLES).flat();
+export const ALL_QUESTIONS: Question[] = Object.values(SAMPLES).flat();
 const QUESTION_BY_ID = new Map(ALL_QUESTIONS.map((q) => [q.id, q]));
 
 export function getQuestionsByIds(ids: string[]): Question[] {
@@ -985,15 +985,22 @@ export function getQuestionsByIds(ids: string[]): Question[] {
 }
 
 /**
- * Pick `count` question ids deterministically from `seed` — one per format,
- * so everyone sharing the seed (a day, a room) gets the same varied set.
+ * Pick `count` question ids deterministically from `seed` — one per format.
+ * Pass `disabled` to exclude specific question IDs from selection.
  */
-export function pickQuestionIds(seed: string, count = 10): string[] {
+export function pickQuestionIds(
+  seed: string,
+  count = 10,
+  disabled?: Set<string>,
+): string[] {
   const rng = mulberry32(hashString(seed));
   const types = seededShuffle(CATALOG_TYPES, rng).slice(0, count);
-  return types.map((type) => {
-    const pool = SAMPLES[type]!;
-    return pool[Math.floor(rng() * pool.length)].id;
+  return types.flatMap((type) => {
+    const pool = disabled
+      ? (SAMPLES[type] ?? []).filter((q) => !disabled.has(q.id))
+      : (SAMPLES[type] ?? []);
+    if (pool.length === 0) return [];
+    return [pool[Math.floor(rng() * pool.length)].id];
   });
 }
 
@@ -1015,8 +1022,9 @@ export function pickFilteredQuestionIds(
   seed: string,
   count: number,
   filter?: QuestionFilter,
+  disabled?: Set<string>,
 ): string[] {
-  let pool = ALL_QUESTIONS;
+  let pool = disabled ? ALL_QUESTIONS.filter((q) => !disabled.has(q.id)) : ALL_QUESTIONS;
   if (filter?.themes?.length) {
     pool = pool.filter((qn) => filter.themes!.includes(qn.theme));
   }

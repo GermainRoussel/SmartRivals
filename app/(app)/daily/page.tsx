@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Clock, Flame, Trophy, Play, Zap, CheckCircle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { QuestionPlayer } from "@/components/quiz/QuestionPlayer";
-import { getDailyQuestions, todayKey } from "@/lib/quiz/bank";
+import { loadDailyQuestionsForClient } from "@/app/actions/questions";
 import { computePoints, nextStreak, maxPointsPerQuestion } from "@/lib/scoring";
 import { saveDailyAttempt, getTodayAttempt, type TodayAttempt } from "@/app/actions/quiz";
 import { syncAchievements } from "@/app/actions/achievements";
@@ -16,16 +16,17 @@ const MAX_TIME = 15;
 const FEEDBACK_MS = 1500;
 
 export default function DailyPage() {
-  const questions = useMemo(() => getDailyQuestions(todayKey()), []);
+  const [questions, setQuestions] = useState<import("@/types").Question[]>([]);
 
-  // --- Already-played guard ---
+  // --- Already-played guard + question loading (merged into one loading phase) ---
   const [checkingAttempt, setCheckingAttempt] = useState(true);
   const [todayResult, setTodayResult] = useState<TodayAttempt | null>(null);
   const [practice, setPractice] = useState(false);
 
   useEffect(() => {
-    getTodayAttempt().then((result) => {
+    Promise.all([getTodayAttempt(), loadDailyQuestionsForClient()]).then(([result, qs]) => {
       setTodayResult(result);
+      setQuestions(qs);
       setCheckingAttempt(false);
     });
   }, []);
