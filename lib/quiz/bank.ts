@@ -7,6 +7,7 @@ import {
 import { DIFFERENCE_SCENES } from "./differences";
 import { PATTERN_PUZZLES } from "./patterns";
 import { HOTSPOT_SCENES } from "./hotspots";
+import { EXAMPLE_SAMPLES } from "./bank-examples";
 
 /**
  * Seeded question bank (Phase 1: in-code; Phase 2: mirrored into Supabase).
@@ -929,6 +930,9 @@ const EXTRA_SAMPLES: Partial<Record<QuestionType, Question[]>> = {
 // Merge the extras into the bank (one pass, at import time).
 for (const key of Object.keys(EXTRA_SAMPLES) as QuestionType[]) {
   SAMPLES[key] = [...(SAMPLES[key] ?? []), ...EXTRA_SAMPLES[key]!];
+}
+for (const key of Object.keys(EXAMPLE_SAMPLES) as QuestionType[]) {
+  SAMPLES[key] = [...(SAMPLES[key] ?? []), ...EXAMPLE_SAMPLES[key]!];
 }
 
 /** All catalog formats, in display order. */
