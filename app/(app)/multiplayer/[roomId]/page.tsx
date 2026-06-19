@@ -3,6 +3,7 @@
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trophy, Crown, LogOut, Play, Clock, Copy, Check } from "lucide-react";
+import Image from "next/image";
 import { useRoom } from "@/components/multiplayer/useRoom";
 import { QuestionPlayer } from "@/components/quiz/QuestionPlayer";
 import { Button } from "@/components/ui/Button";
@@ -36,7 +37,7 @@ function playerAvatar(p: RoomPlayer) {
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = use(params);
   const router = useRouter();
-  const { room, players, me, loading } = useRoom(roomId);
+  const { room, players, me, loading, onlineIds } = useRoom(roomId);
 
   const [now, setNow] = useState(() => Date.now());
   const scoreRef = useRef(0);
@@ -98,7 +99,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     return () => clearTimeout(t);
   }, [isHost, allAnswered, idx, total, roomId]);
 
-  // If the host has left, promote the next player so the game can resume.
+  // DB-row fallback: promote if host's room_players row is gone.
+  // (Presence-based detection in useRoom.ts fires faster on tab close.)
   useEffect(() => {
     if (!room || players.length === 0) return;
     const hostPresent = players.some((p) => p.user_id === room.host_id);
@@ -192,13 +194,23 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
           <p className="text-slate-500 mb-8">Partagez ce code pour inviter un ami.</p>
 
           <div className="space-y-3 mb-8 text-left">
-            {players.map((p) => (
-              <div key={p.user_id} className="flex items-center gap-3 bg-slate-50 rounded-2xl p-3">
-                <img src={playerAvatar(p)} alt="" className="w-10 h-10 rounded-full bg-white" />
-                <span className="font-bold text-slate-700 flex-1">{playerName(p)}</span>
-                {p.user_id === room.host_id && <Crown className="text-yellow-500" size={20} />}
-              </div>
-            ))}
+            {players.map((p) => {
+              const online = onlineIds.size === 0 || onlineIds.has(p.user_id);
+              return (
+                <div key={p.user_id} className="flex items-center gap-3 bg-slate-50 rounded-2xl p-3">
+                  <div className="relative">
+                    <Image src={playerAvatar(p)} alt="" width={40} height={40} unoptimized className="w-10 h-10 rounded-full bg-white" />
+                    {!online && (
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-slate-400 border-2 border-white" title="Hors ligne" />
+                    )}
+                  </div>
+                  <span className={`font-bold flex-1 ${online ? "text-slate-700" : "text-slate-400"}`}>
+                    {playerName(p)}
+                  </span>
+                  {p.user_id === room.host_id && <Crown className="text-yellow-500" size={20} />}
+                </div>
+              );
+            })}
           </div>
 
           {isHost ? (
@@ -247,7 +259,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
               <div className={`w-8 font-black ${i === 0 ? "text-yellow-500" : "text-slate-400"}`}>
                 #{i + 1}
               </div>
-              <img src={playerAvatar(p)} alt="" className="w-10 h-10 rounded-full bg-slate-100 mx-3" />
+              <Image src={playerAvatar(p)} alt="" width={40} height={40} unoptimized className="w-10 h-10 rounded-full bg-slate-100 mx-3" />
               <span className="font-bold text-slate-700 flex-1 text-left">{playerName(p)}</span>
               <span className="font-display font-bold text-primary">{p.score} pts</span>
             </div>
@@ -270,21 +282,31 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
           <h3 className="font-bold text-slate-700">Classement</h3>
         </div>
         <div className="space-y-3">
-          {ranked.map((p, i) => (
-            <div
-              key={p.user_id}
-              className={`flex items-center p-3 rounded-2xl ${p.user_id === me ? "bg-blue-50 border border-blue-200" : "bg-slate-50"}`}
-            >
-              <div className={`font-black w-6 mr-2 ${i === 0 ? "text-yellow-500" : "text-slate-400"}`}>
-                #{i + 1}
+          {ranked.map((p, i) => {
+            const online = onlineIds.size === 0 || onlineIds.has(p.user_id);
+            return (
+              <div
+                key={p.user_id}
+                className={`flex items-center p-3 rounded-2xl ${p.user_id === me ? "bg-blue-50 border border-blue-200" : "bg-slate-50"}`}
+              >
+                <div className={`font-black w-6 mr-2 ${i === 0 ? "text-yellow-500" : "text-slate-400"}`}>
+                  #{i + 1}
+                </div>
+                <div className="relative mr-2">
+                  <Image src={playerAvatar(p)} alt="" width={32} height={32} unoptimized className="w-8 h-8 rounded-full bg-white" />
+                  {!online && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-slate-400 border-2 border-white" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-xs font-bold truncate ${online ? "" : "text-slate-400"}`}>
+                    {playerName(p)}
+                  </div>
+                  <div className="text-xs text-slate-500">{p.score} pts</div>
+                </div>
               </div>
-              <img src={playerAvatar(p)} alt="" className="w-8 h-8 rounded-full mr-2 bg-white" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold truncate">{playerName(p)}</div>
-                <div className="text-xs text-slate-500">{p.score} pts</div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

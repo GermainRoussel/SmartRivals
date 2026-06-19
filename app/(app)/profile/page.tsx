@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { LogIn, Swords, Pencil } from "lucide-react";
 import { getProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -107,9 +108,12 @@ export default async function ProfilePage() {
   return (
     <div className="max-w-3xl mx-auto mt-4 space-y-6">
       <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 flex flex-col items-center">
-        <img
+        <Image
           src={avatarFor(profile.username, profile.avatar_url)}
           alt={profile.username}
+          width={128}
+          height={128}
+          unoptimized
           className="w-32 h-32 rounded-full bg-slate-100 mb-4 border-4 border-white shadow-lg"
         />
         <h2 className="text-3xl font-display font-bold text-slate-800">{profile.username}</h2>
