@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Swords, Users, KeyRound, Play, Loader2, X, SlidersHorizontal, Settings } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -15,11 +15,15 @@ import {
   createPrivateRoom,
   joinByCode,
   findMatch,
+  matchWithBot,
   leaveQueue,
   MP_QUESTION_COUNT,
 } from "@/lib/multiplayer";
 
 type Mode = "menu" | "private" | "setup" | "searching";
+
+/** How long to wait for a human before falling back to a bot opponent. */
+const BOT_FALLBACK_MS = 8_000;
 
 function newQuestionSeed() {
   return `mp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -34,6 +38,12 @@ export default function MultiplayerPage() {
   const [themes, setThemes] = useState<QuestionTheme[]>([]);
   const [difficulty, setDifficulty] = useState<Difficulty>("ANY");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const botTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear any pending bot fallback when leaving the page.
+  useEffect(() => () => {
+    if (botTimerRef.current) clearTimeout(botTimerRef.current);
+  }, []);
 
   const filtersActive = themes.length > 0 || difficulty !== "ANY";
 
@@ -73,10 +83,23 @@ export default function MultiplayerPage() {
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "room_players", filter: `user_id=eq.${user.id}` },
           (payload) => {
+            if (botTimerRef.current) clearTimeout(botTimerRef.current);
             router.push(`/multiplayer/${(payload.new as { room_id: string }).room_id}`);
           },
         )
         .subscribe();
+
+      // Anti cold-start: if no human shows up, fall back to a bot opponent.
+      botTimerRef.current = setTimeout(async () => {
+        try {
+          const roomId = await matchWithBot(ids);
+          // null ⇒ a real player matched us first; the channel will navigate.
+          if (roomId) router.push(`/multiplayer/${roomId}`);
+        } catch (e) {
+          setError((e as Error).message);
+          setMode("menu");
+        }
+      }, BOT_FALLBACK_MS);
     } catch (e) {
       setError((e as Error).message);
       setMode("menu");
@@ -84,6 +107,7 @@ export default function MultiplayerPage() {
   };
 
   const cancelSearch = async () => {
+    if (botTimerRef.current) clearTimeout(botTimerRef.current);
     await leaveQueue().catch(() => {});
     setMode("menu");
   };

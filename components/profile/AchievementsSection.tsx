@@ -13,8 +13,10 @@ interface Props {
 
 export function AchievementsSection({ achievements, unlockedCount, dailyStreak, unlockedMap }: Props) {
   const [open, setOpen] = useState(true);
+  // Snapshot "now" once on mount — Date.now() during render is impure (and the
+  // "recently unlocked" highlight doesn't need to tick in real time).
+  const [now] = useState(() => Date.now());
   const total = achievements.length;
-  const now = Date.now();
   const TWO_DAYS_MS = 48 * 60 * 60 * 1000;
 
   return (

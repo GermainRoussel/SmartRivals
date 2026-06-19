@@ -2,13 +2,14 @@
 
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Trophy, Crown, LogOut, Play, Clock, Copy, Check } from "lucide-react";
+import { Loader2, Trophy, Crown, LogOut, Play, Clock, Copy, Check, Bot } from "lucide-react";
 import Image from "next/image";
 import { useRoom } from "@/components/multiplayer/useRoom";
 import { QuestionPlayer } from "@/components/quiz/QuestionPlayer";
 import { Button } from "@/components/ui/Button";
 import { getQuestionsByIds } from "@/lib/quiz/bank";
 import { computePoints, nextStreak } from "@/lib/scoring";
+import { simulateBotAnswer, type BotPersona } from "@/lib/bot";
 import { syncAchievements } from "@/app/actions/achievements";
 import { toastAchievement } from "@/components/ui/toast/useToastStore";
 import { Confetti } from "@/components/ui/Confetti";
@@ -17,6 +18,7 @@ import {
   startGame,
   setScore,
   setAnswered,
+  setBotScore,
   advanceQuestion,
   promoteHost,
   recordMatchResult,
@@ -34,6 +36,15 @@ function playerAvatar(p: RoomPlayer) {
   );
 }
 
+/** Honest badge so a bot opponent is never mistaken for a human. */
+function BotBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded-md">
+      <Bot size={11} /> Bot
+    </span>
+  );
+}
+
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = use(params);
   const router = useRouter();
@@ -46,6 +57,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
   const promotingRef = useRef(false);
   const recordedRef = useRef(false);
   const advancedRef = useRef(-1);
+  const botScoreRef = useRef(0);
+  const botStreakRef = useRef(0);
+  const botAnsweredRef = useRef(-1);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -62,6 +76,17 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     [room],
   );
   const currentQ = questions[idx];
+
+  // Bot opponent (anti cold-start). The persona lives in room.settings.bot;
+  // the human host drives its answers since the bot has no client.
+  const botPersona = useMemo<BotPersona | null>(() => {
+    const raw = (room?.settings as { bot?: BotPersona } | undefined)?.bot;
+    return raw ?? null;
+  }, [room?.settings]);
+  const botPlayer = useMemo(
+    () => players.find((p) => p.profiles?.is_bot),
+    [players],
+  );
 
   const timeLeft = room?.question_ends_at
     ? Math.max(0, Math.ceil((new Date(room.question_ends_at).getTime() - now) / 1000))
@@ -98,6 +123,32 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     );
     return () => clearTimeout(t);
   }, [isHost, allAnswered, idx, total, roomId]);
+
+  // Host drives the bot opponent: schedule its (deterministic) answer for the
+  // current question, then persist its score via the definer RPC.
+  useEffect(() => {
+    if (!isHost || !botPersona || !botPlayer) return;
+    if (room?.status !== "playing" || !room.question_ends_at) return;
+    if (botAnsweredRef.current >= idx) return;
+
+    const sim = simulateBotAnswer(roomId, idx, botPersona, MP_QUESTION_MS);
+    const endsAt = new Date(room.question_ends_at).getTime();
+    const startAt = endsAt - MP_QUESTION_MS;
+    const answerAt = startAt + (MP_QUESTION_MS - sim.timeRemaining * 1000);
+    const delay = Math.max(0, answerAt - Date.now());
+
+    const t = setTimeout(() => {
+      botAnsweredRef.current = idx;
+      botScoreRef.current += computePoints({
+        isCorrect: sim.isCorrect,
+        timeRemaining: sim.timeRemaining,
+        streak: botStreakRef.current,
+      });
+      botStreakRef.current = nextStreak(botStreakRef.current, sim.isCorrect);
+      void setBotScore(roomId, botScoreRef.current, idx);
+    }, delay);
+    return () => clearTimeout(t);
+  }, [isHost, botPersona, botPlayer, room?.status, room?.question_ends_at, idx, roomId]);
 
   // DB-row fallback: promote if host's room_players row is gone.
   // (Presence-based detection in useRoom.ts fires faster on tab close.)
@@ -204,8 +255,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                       <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-slate-400 border-2 border-white" title="Hors ligne" />
                     )}
                   </div>
-                  <span className={`font-bold flex-1 ${online ? "text-slate-700" : "text-slate-400"}`}>
+                  <span className={`font-bold flex items-center gap-2 flex-1 ${online ? "text-slate-700" : "text-slate-400"}`}>
                     {playerName(p)}
+                    {p.profiles?.is_bot && <BotBadge />}
                   </span>
                   {p.user_id === room.host_id && <Crown className="text-yellow-500" size={20} />}
                 </div>
@@ -260,7 +312,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 #{i + 1}
               </div>
               <Image src={playerAvatar(p)} alt="" width={40} height={40} unoptimized className="w-10 h-10 rounded-full bg-slate-100 mx-3" />
-              <span className="font-bold text-slate-700 flex-1 text-left">{playerName(p)}</span>
+              <span className="font-bold text-slate-700 flex-1 text-left flex items-center gap-2">
+                {playerName(p)}
+                {p.profiles?.is_bot && <BotBadge />}
+              </span>
               <span className="font-display font-bold text-primary">{p.score} pts</span>
             </div>
           ))}
@@ -299,8 +354,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className={`text-xs font-bold truncate ${online ? "" : "text-slate-400"}`}>
+                  <div className={`text-xs font-bold truncate flex items-center gap-1 ${online ? "" : "text-slate-400"}`}>
                     {playerName(p)}
+                    {p.profiles?.is_bot && <BotBadge />}
                   </div>
                   <div className="text-xs text-slate-500">{p.score} pts</div>
                 </div>

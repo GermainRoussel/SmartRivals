@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "node --env-file-if-exists=.env.local scripts/db-exec.mjs",
+    "seed:bots": "node --env-file-if-exists=.env.local scripts/seed-bots.mjs",
     "test": "vitest run"
   },
   "dependencies": {

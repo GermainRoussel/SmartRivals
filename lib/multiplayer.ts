@@ -29,10 +29,10 @@ export interface RoomPlayer {
    *  Optional: absent until the 0008_answered_index migration is applied. */
   answered_index?: number;
   joined_at: string;
-  profiles?: { username: string; avatar_url: string | null } | null;
+  profiles?: { username: string; avatar_url: string | null; is_bot?: boolean } | null;
 }
 
-export const PLAYER_SELECT = "*, profiles(username, avatar_url)";
+export const PLAYER_SELECT = "*, profiles(username, avatar_url, is_bot)";
 
 async function uid(): Promise<string> {
   const supabase = createClient();
@@ -147,6 +147,38 @@ export async function findMatch(questionIds: string[]): Promise<string | null> {
   });
   if (error) throw error;
   return (data as string | null) ?? null;
+}
+
+/**
+ * Fallback when the matchmaking queue stays empty: pair the caller with a bot.
+ * Returns the new room id, or null if a real player matched the caller first
+ * (in which case the caller should ignore this and follow the realtime match).
+ */
+export async function matchWithBot(questionIds: string[]): Promise<string | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("match_with_bot", {
+    p_question_ids: questionIds,
+  });
+  if (error) throw error;
+  return (data as string | null) ?? null;
+}
+
+/**
+ * Persist the bot's simulated score for a room (the human host drives this).
+ * Uses a SECURITY DEFINER RPC because room_players RLS only allows a player to
+ * update their own row.
+ */
+export async function setBotScore(
+  roomId: string,
+  score: number,
+  answeredIndex: number,
+): Promise<void> {
+  const supabase = createClient();
+  await supabase.rpc("set_bot_score", {
+    p_room: roomId,
+    p_score: score,
+    p_answered: answeredIndex,
+  });
 }
 
 export async function leaveQueue(): Promise<void> {
